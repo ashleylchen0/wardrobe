@@ -14,6 +14,7 @@ import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import * as schema from "../src/db/schema";
 import { items, itemAliases, wears } from "../src/db/schema";
+import { refineBottoms } from "../src/lib/categorize";
 
 const XLSX_PATH =
   process.env.XLSX_PATH ??
@@ -161,13 +162,15 @@ async function main() {
       if (!existing) {
         const lowered = rawCat?.toLowerCase() ?? "";
         const isWorkout = lowered === "workout";
+        const mapped = isWorkout
+          ? inferWorkoutCategory(name)
+          : (CATEGORY_MAP[lowered] ?? "tops");
         drafts.set(k, {
           name: name.trim(),
           nameKey: k,
           brand,
-          category: isWorkout
-            ? inferWorkoutCategory(name)
-            : (CATEGORY_MAP[lowered] ?? "tops"),
+          // The sheets used Jeans/Bottoms/Pants inconsistently; name decides.
+          category: refineBottoms(name, mapped),
           tags: isWorkout ? ["workout"] : [],
           costCents,
           acquiredOn: acquired.acquiredOn,
