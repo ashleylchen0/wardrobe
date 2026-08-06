@@ -1,5 +1,6 @@
 "use server";
 
+import { put } from "@vercel/blob";
 import { asc, eq, isNotNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -25,6 +26,8 @@ const schema = z.object({
   productUrl: z.string().trim().url("That doesn't look like a link.").optional().or(z.literal("")),
   notes: z.string().trim().max(500).optional(),
   tags: z.string().trim().optional(),
+  /** A listing's preview image, resolved by `fetchProductImage`. */
+  imageUrl: z.string().trim().url().optional().or(z.literal("")),
 });
 
 /**
@@ -45,6 +48,64 @@ async function suggestFreeName(base: string): Promise<string> {
   return `${base} ${Date.now()}`;
 }
 
+/** Listing images are already web-sized; anything larger is a mistake. */
+const MAX_REMOTE_IMAGE_BYTES = 3 * 1024 * 1024;
+
+/**
+ * Copies a listing's image into our own store rather than linking it — the
+ * whole reason for in-app photos is that shop images vanish when something
+ * sells out, and a hotlink would rot the same way.
+ *
+ * Deliberately fetch-then-put rather than the SDK's `putFromUrl`: that call
+ * hangs indefinitely against this store, ignoring its own abort signal.
+ */
+async function storeRemoteImage(
+  name: string,
+  imageUrl: string,
+): Promise<string | null> {
+  const slug =
+    name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 48) || "item";
+
+  try {
+    const response = await fetch(imageUrl, {
+      signal: AbortSignal.timeout(10_000),
+      headers: { Accept: "image/*" },
+    });
+    if (!response.ok) return null;
+
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!contentType.startsWith("image/")) return null;
+
+    const bytes = await response.arrayBuffer();
+    if (bytes.byteLength === 0 || bytes.byteLength > MAX_REMOTE_IMAGE_BYTES) {
+      return null;
+    }
+
+    const extension = contentType.includes("png")
+      ? "png"
+      : contentType.includes("webp")
+        ? "webp"
+        : contentType.includes("avif")
+          ? "avif"
+          : "jpg";
+
+    const blob = await put(`items/${slug}.${extension}`, bytes, {
+      access: "private",
+      addRandomSuffix: true,
+      contentType,
+    });
+    return blob.pathname;
+  } catch {
+    // A failed image must never cost you the item.
+    return null;
+  }
+}
+
 export async function createItem(formData: FormData): Promise<CreateResult> {
   if (!(await getSession())) throw new Error("Unauthorized");
 
@@ -57,6 +118,7 @@ export async function createItem(formData: FormData): Promise<CreateResult> {
     productUrl: formData.get("productUrl") ?? "",
     notes: formData.get("notes") ?? undefined,
     tags: formData.get("tags") ?? undefined,
+    imageUrl: formData.get("imageUrl") ?? "",
   });
 
   if (!parsed.success) {
@@ -94,6 +156,8 @@ export async function createItem(formData: FormData): Promise<CreateResult> {
     .map((t) => t.trim().toLowerCase())
     .filter(Boolean);
 
+  const imagePath = v.imageUrl ? await storeRemoteImage(v.name, v.imageUrl) : null;
+
   const [created] = await db
     .insert(items)
     .values({
@@ -107,6 +171,7 @@ export async function createItem(formData: FormData): Promise<CreateResult> {
       acquiredPrecision: v.acquiredOn ? "day" : "unknown",
       productUrl: v.productUrl || null,
       notes: v.notes || null,
+      imagePath,
     })
     .returning({ id: items.id });
 

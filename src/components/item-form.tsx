@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { CATEGORIES, type Category } from "@/lib/categories";
 import { createItem } from "@/app/items/new-item-actions";
+import { fetchProductImage } from "@/app/items/product-image";
 
 /**
  * The full add-item form. Only name and category are required — 60 of the
@@ -17,11 +18,41 @@ export function ItemForm({ brands }: { brands: string[] }) {
   const [category, setCategory] = useState<Category>("tops");
   const [error, setError] = useState<string | null>(null);
   const [suggestion, setSuggestion] = useState<string | null>(null);
+  const [productUrl, setProductUrl] = useState("");
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageNote, setImageNote] = useState<string | null>(null);
+  const [fetching, setFetching] = useState(false);
 
-  function submit(formData: FormData) {
+  async function grabImage() {
+    setFetching(true);
+    setImageNote(null);
+    try {
+      const result = await fetchProductImage(productUrl);
+      if (result.ok) {
+        setImageUrl(result.imageUrl);
+      } else {
+        setImageUrl(null);
+        setImageNote(result.error);
+      }
+    } catch {
+      setImageNote("Couldn't fetch that page. Upload a photo instead.");
+    } finally {
+      setFetching(false);
+    }
+  }
+
+  /**
+   * Handled through onSubmit rather than the `action` prop: React resets an
+   * uncontrolled form once a form action resolves, which would wipe everything
+   * you typed the moment the name collided with an existing item.
+   */
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
     setError(null);
     setSuggestion(null);
     formData.set("category", category);
+    if (imageUrl) formData.set("imageUrl", imageUrl);
 
     startTransition(async () => {
       const result = await createItem(formData);
@@ -45,7 +76,7 @@ export function ItemForm({ brands }: { brands: string[] }) {
   }
 
   return (
-    <form ref={formRef} action={submit} className="flex max-w-xl flex-col gap-6">
+    <form ref={formRef} onSubmit={submit} className="flex max-w-xl flex-col gap-6">
       <Field label="Item name" hint="How you'd refer to it when logging an outfit">
         <input
           name="name"
@@ -122,14 +153,54 @@ export function ItemForm({ brands }: { brands: string[] }) {
         </Field>
       </div>
 
-      <Field label="Product link" hint="Optional — the photo you upload is what survives if the page goes down">
-        <input
-          type="url"
-          name="productUrl"
-          placeholder="https://"
-          className="border-hair focus:border-sage w-full rounded-lg border bg-card px-3 py-2 text-sm outline-none"
-        />
+      <Field label="Product link" hint="Optional. Fetching copies the image into your own storage, so it survives the listing coming down.">
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="url"
+            name="productUrl"
+            value={productUrl}
+            onChange={(e) => setProductUrl(e.target.value)}
+            placeholder="https://"
+            className="border-hair focus:border-sage min-w-56 flex-1 rounded-lg border bg-card px-3 py-2 text-sm outline-none"
+          />
+          <button
+            type="button"
+            onClick={grabImage}
+            disabled={!productUrl.trim() || fetching}
+            className="border-hair hover:border-ink rounded-full border px-4 py-2 text-xs whitespace-nowrap transition-colors disabled:opacity-40"
+          >
+            {fetching ? "Fetching…" : "Fetch photo"}
+          </button>
+        </div>
       </Field>
+
+      {imageUrl && (
+        <div className="border-hair flex items-center gap-4 rounded-xl border bg-card p-3">
+          {/* eslint-disable-next-line @next/next/no-img-element -- remote preview, not yet stored */}
+          <img
+            src={imageUrl}
+            alt="Preview from the product page"
+            className="bg-tile size-20 rounded-lg object-cover"
+          />
+          <div className="flex flex-col gap-1 text-sm">
+            <span>Found a photo on that page.</span>
+            <span className="text-muted text-xs">
+              It gets copied into your storage when you add the item.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setImageUrl(null)}
+            className="text-muted hover:text-cpw-bad ml-auto text-xs"
+          >
+            Discard
+          </button>
+        </div>
+      )}
+
+      {imageNote && !imageUrl && (
+        <p className="text-muted text-xs">{imageNote}</p>
+      )}
 
       <Field label="Notes">
         <textarea
