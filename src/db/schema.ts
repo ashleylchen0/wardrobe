@@ -4,8 +4,10 @@ import {
   index,
   integer,
   jsonb,
+  numeric,
   pgEnum,
   pgTable,
+  pgView,
   text,
   timestamp,
   unique,
@@ -131,6 +133,18 @@ export const wears = pgTable(
     index("wears_item_id_idx").on(t.itemId),
   ],
 );
+
+/**
+ * Created in drizzle/0001_item_stats_view.sql. Declared here with `.existing()`
+ * so queries are typed without drizzle-kit trying to manage the DDL.
+ */
+export const itemStats = pgView("item_stats", {
+  itemId: uuid("item_id").notNull(),
+  timesWorn: integer("times_worn").notNull(),
+  costPerWearCents: numeric("cost_per_wear_cents"),
+  firstWorn: date("first_worn"),
+  lastWorn: date("last_worn"),
+}).existing();
 
 export type Item = typeof items.$inferSelect;
 export type NewItem = typeof items.$inferInsert;
