@@ -13,7 +13,7 @@ import ExcelJS from "exceljs";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import * as schema from "../src/db/schema";
-import { items, itemAliases, wears } from "../src/db/schema";
+import { items, wears } from "../src/db/schema";
 import { refineBottoms } from "../src/lib/categorize";
 
 const XLSX_PATH =
@@ -367,7 +367,20 @@ async function main() {
   // ----------------------------------------------------------------- insert
   const db = drizzle(neon(process.env.DATABASE_URL!), { schema });
 
-  const rows = [...drafts.values()].map(({ statedTimesWorn: _s, ...r }) => r);
+  // `statedTimesWorn` is report-only and has no column — drop it explicitly.
+  const rows = [...drafts.values()].map((d) => ({
+    name: d.name,
+    nameKey: d.nameKey,
+    brand: d.brand,
+    category: d.category,
+    tags: d.tags,
+    costCents: d.costCents,
+    acquiredOn: d.acquiredOn,
+    acquiredPrecision: d.acquiredPrecision,
+    notes: d.notes,
+    needsReview: d.needsReview,
+    importConflicts: d.importConflicts,
+  }));
   const inserted: { id: string; nameKey: string }[] = [];
   for (let i = 0; i < rows.length; i += 100) {
     const chunk = rows.slice(i, i + 100);
