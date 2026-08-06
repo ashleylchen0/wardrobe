@@ -1,7 +1,10 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useOptimistic, useState, useTransition } from "react";
 import { ItemPhoto } from "@/components/item-photo";
+import { createItem } from "@/app/items/new-item-actions";
 import { moneyFromNumeric } from "@/lib/format";
 import { CATEGORIES, type Category } from "@/lib/categories";
 import type { PickableItem } from "@/lib/queries";
@@ -124,9 +127,7 @@ export function OutfitPicker({
         </div>
 
         {visible.length === 0 ? (
-          <p className="text-muted py-10 text-center text-sm">
-            Nothing matches “{query}”.
-          </p>
+          <QuickAdd query={query.trim()} onAdded={() => setQuery("")} />
         ) : (
           <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
             {visible.map((item) => {
@@ -168,6 +169,81 @@ export function OutfitPicker({
           </ul>
         )}
       </section>
+    </div>
+  );
+}
+
+/**
+ * Adding something mid-log, without leaving the page. It lands in the closet
+ * unworn — you still tap it to log it, since buying and wearing aren't the same
+ * event.
+ */
+function QuickAdd({ query, onAdded }: { query: string; onAdded: () => void }) {
+  const router = useRouter();
+  const [category, setCategory] = useState<Category>("tops");
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  if (!query) {
+    return (
+      <p className="text-muted py-10 text-center text-sm">
+        No items match that filter.
+      </p>
+    );
+  }
+
+  function add() {
+    setError(null);
+    startTransition(async () => {
+      const formData = new FormData();
+      formData.set("name", query);
+      formData.set("category", category);
+      const result = await createItem(formData);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      router.refresh();
+      onAdded();
+    });
+  }
+
+  return (
+    <div className="border-hair flex flex-col gap-3 rounded-2xl border border-dashed px-5 py-6">
+      <p className="text-muted text-sm">
+        Nothing in your closet matches “{query}”. Add it?
+      </p>
+
+      <div className="flex flex-wrap gap-1.5">
+        {CATEGORIES.map((c) => (
+          <CategoryChip
+            key={c}
+            active={category === c}
+            onClick={() => setCategory(c)}
+          >
+            {c}
+          </CategoryChip>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={add}
+          disabled={pending}
+          className="bg-sage hover:bg-sage/90 rounded-full px-4 py-1.5 text-xs font-medium text-white transition-colors disabled:opacity-50"
+        >
+          {pending ? "Adding…" : "Add to closet"}
+        </button>
+        <Link
+          href="/items/new"
+          className="text-muted hover:text-ink text-xs underline underline-offset-4"
+        >
+          Add with full details instead
+        </Link>
+      </div>
+
+      {error && <p className="text-cpw-bad text-xs">{error}</p>}
     </div>
   );
 }

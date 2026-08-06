@@ -53,6 +53,12 @@ export default async function ClosetPage({
           <p className="text-muted text-sm tabular-nums">
             {itemList.length} of {total} items
           </p>
+          <Link
+            href="/items/new"
+            className="border-hair hover:border-ink ml-auto rounded-full border px-4 py-1.5 text-xs transition-colors"
+          >
+            Add item
+          </Link>
         </header>
 
         {/* Status is a separate axis from category — an archived item still has one. */}

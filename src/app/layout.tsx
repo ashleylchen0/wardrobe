@@ -46,6 +46,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               <nav className="flex items-baseline gap-7">
                 <NavLink href="/">Closet</NavLink>
                 <NavLink href="/log">Today</NavLink>
+                <NavLink href="/calendar">Calendar</NavLink>
                 {/* Routes that don't exist yet read as text, not links that 404. */}
                 <span className="eyebrow opacity-45" title="Not built yet">
                   Stats

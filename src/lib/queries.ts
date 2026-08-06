@@ -162,5 +162,48 @@ export async function getRecentLoggedDates(limit = 7) {
   return rows;
 }
 
+/**
+ * Wear counts per day across a month, plus the categories worn, so a cell can
+ * show what kind of day it was without loading every item.
+ */
+export async function getMonthCoverage(from: string, to: string) {
+  const rows = await db
+    .select({
+      wornOn: wears.wornOn,
+      count: sql<number>`count(*)::int`,
+      categories: sql<string[]>`array_agg(distinct ${items.category}::text)`,
+    })
+    .from(wears)
+    .innerJoin(items, eq(items.id, wears.itemId))
+    .where(sql`${wears.wornOn} >= ${from} and ${wears.wornOn} <= ${to}`)
+    .groupBy(wears.wornOn);
+
+  return new Map(rows.map((r) => [r.wornOn, r]));
+}
+
+/** Logged-day totals per month, for the year strip and the header stats. */
+export async function getMonthlyTotals(year: number) {
+  return db
+    .select({
+      month: sql<string>`to_char(${wears.wornOn}, 'YYYY-MM')`,
+      days: sql<number>`count(distinct ${wears.wornOn})::int`,
+      wears: sql<number>`count(*)::int`,
+    })
+    .from(wears)
+    .where(sql`extract(year from ${wears.wornOn}) = ${year}`)
+    .groupBy(sql`to_char(${wears.wornOn}, 'YYYY-MM')`)
+    .orderBy(sql`to_char(${wears.wornOn}, 'YYYY-MM')`);
+}
+
+/** Years that have any wears, for the year switcher. */
+export async function getLoggedYears() {
+  const rows = await db
+    .select({ year: sql<number>`extract(year from ${wears.wornOn})::int` })
+    .from(wears)
+    .groupBy(sql`extract(year from ${wears.wornOn})`)
+    .orderBy(sql`extract(year from ${wears.wornOn})`);
+  return rows.map((r) => r.year);
+}
+
 export type PickableItem = Awaited<ReturnType<typeof getPickableItems>>[number];
 export type ClosetItem = Awaited<ReturnType<typeof getClosetItems>>[number];
