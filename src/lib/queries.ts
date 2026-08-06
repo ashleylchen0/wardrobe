@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { category, items, itemStats, wears } from "@/db/schema";
 
@@ -116,4 +116,53 @@ export async function getItem(id: string) {
   return { ...row, history };
 }
 
+/**
+ * Everything selectable when logging an outfit: the current closet, plus any
+ * archived item already logged on that date — you can edit a day from before
+ * you gave something away without it vanishing from the picker.
+ */
+export async function getPickableItems(date: string) {
+  return db
+    .select({
+      id: items.id,
+      name: items.name,
+      brand: items.brand,
+      category: items.category,
+      imagePath: items.imagePath,
+      status: items.status,
+      timesWorn: itemStats.timesWorn,
+      costPerWearCents: itemStats.costPerWearCents,
+      lastWorn: itemStats.lastWorn,
+    })
+    .from(items)
+    .innerJoin(itemStats, eq(itemStats.itemId, items.id))
+    .where(
+      or(
+        eq(items.status, "active"),
+        sql`exists (select 1 from ${wears} w where w.item_id = ${items.id} and w.worn_on = ${date})`,
+      ),
+    )
+    .orderBy(asc(items.name));
+}
+
+export async function getOutfitForDate(date: string) {
+  const rows = await db
+    .select({ itemId: wears.itemId })
+    .from(wears)
+    .where(eq(wears.wornOn, date));
+  return rows.map((r) => r.itemId);
+}
+
+/** Recent days that have any wears, for the "jump back" list. */
+export async function getRecentLoggedDates(limit = 7) {
+  const rows = await db
+    .select({ wornOn: wears.wornOn, count: sql<number>`count(*)::int` })
+    .from(wears)
+    .groupBy(wears.wornOn)
+    .orderBy(desc(wears.wornOn))
+    .limit(limit);
+  return rows;
+}
+
+export type PickableItem = Awaited<ReturnType<typeof getPickableItems>>[number];
 export type ClosetItem = Awaited<ReturnType<typeof getClosetItems>>[number];

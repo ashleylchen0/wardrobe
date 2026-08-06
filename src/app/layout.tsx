@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Geist, Geist_Mono, Newsreader } from "next/font/google";
 import "./globals.css";
 import { getSession } from "@/lib/auth";
+import { NavLink } from "@/components/nav-link";
 import { SignOutButton } from "./sign-out";
 
 const geistSans = Geist({
@@ -43,16 +44,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                 Wardrobe
               </Link>
               <nav className="flex items-baseline gap-7">
-                <Link
-                  href="/"
-                  className="eyebrow text-ink border-ink border-b pb-0.5"
-                >
-                  Closet
-                </Link>
+                <NavLink href="/">Closet</NavLink>
+                <NavLink href="/log">Today</NavLink>
                 {/* Routes that don't exist yet read as text, not links that 404. */}
-                <span className="eyebrow opacity-45" title="Not built yet">
-                  Today
-                </span>
                 <span className="eyebrow opacity-45" title="Not built yet">
                   Stats
                 </span>
