@@ -23,18 +23,14 @@ export default async function LoginPage({
   }
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-stone-50 p-6 dark:bg-stone-950">
+    <main className="flex min-h-dvh items-center justify-center p-6">
       <form
         action={signIn}
-        className="w-full max-w-sm space-y-5 rounded-2xl border border-stone-200 bg-white p-8 shadow-sm dark:border-stone-800 dark:bg-stone-900"
+        className="border-hair flex w-full max-w-sm flex-col gap-5 rounded-2xl border bg-card p-8"
       >
-        <div className="space-y-1">
-          <h1 className="text-xl font-semibold text-stone-900 dark:text-stone-50">
-            Wardrobe
-          </h1>
-          <p className="text-sm text-stone-500 dark:text-stone-400">
-            Enter your password to continue.
-          </p>
+        <div className="flex flex-col gap-1">
+          <h1 className="font-serif text-2xl tracking-tight">Wardrobe</h1>
+          <p className="text-muted text-sm">Enter your password to continue.</p>
         </div>
 
         <input type="hidden" name="next" value={next ?? "/"} />
@@ -44,18 +40,16 @@ export default async function LoginPage({
           autoFocus
           autoComplete="current-password"
           aria-label="Password"
-          className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-stone-900 outline-none focus:border-stone-900 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-50 dark:focus:border-stone-400"
+          className="border-hair focus:border-sage w-full rounded-lg border bg-card px-3 py-2 outline-none"
         />
 
         {error && (
-          <p className="text-sm text-red-600 dark:text-red-400">
-            That password didn&apos;t match.
-          </p>
+          <p className="text-cpw-bad text-sm">That password didn&apos;t match.</p>
         )}
 
         <button
           type="submit"
-          className="w-full rounded-lg bg-stone-900 px-4 py-2 font-medium text-white hover:bg-stone-700 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white"
+          className="bg-sage hover:bg-sage/90 w-full rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-colors"
         >
           Sign in
         </button>

@@ -10,10 +10,7 @@ export function SignOutButton() {
 
   return (
     <form action={signOut} className="ml-auto">
-      <button
-        type="submit"
-        className="text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100"
-      >
+      <button type="submit" className="eyebrow hover:text-ink transition-colors">
         Sign out
       </button>
     </form>

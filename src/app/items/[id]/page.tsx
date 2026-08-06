@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { money, moneyFromNumeric } from "@/lib/format";
+import { CostPerWearBar } from "@/components/cost-per-wear";
+import { ItemPhoto } from "@/components/item-photo";
+import { WearHistory } from "@/components/wear-history";
+import { money } from "@/lib/format";
 import { getItem } from "@/lib/queries";
 
 export default async function ItemPage({
@@ -13,84 +16,90 @@ export default async function ItemPage({
   if (!data) notFound();
 
   const { item, timesWorn, costPerWearCents, firstWorn, lastWorn, history } = data;
-  const cost = money(item.costCents);
-  const cpw = moneyFromNumeric(costPerWearCents);
 
   const acquired =
     item.acquiredPrecision === "day"
       ? item.acquiredOn
       : item.acquiredPrecision === "year"
         ? item.acquiredOn?.slice(0, 4)
-        : "unknown";
-
-  // Group wear dates by year so three years of history stays scannable.
-  const byYear = new Map<string, string[]>();
-  for (const w of history) {
-    const y = w.wornOn.slice(0, 4);
-    byYear.set(y, [...(byYear.get(y) ?? []), w.wornOn]);
-  }
+        : "Unknown";
 
   return (
-    <main className="mx-auto max-w-5xl px-5 py-8">
-      <Link
-        href="/"
-        className="text-sm text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100"
-      >
+    <main className="mx-auto w-full max-w-5xl px-6 py-10">
+      <Link href="/" className="eyebrow hover:text-ink transition-colors">
         ← Closet
       </Link>
 
-      <div className="mt-5 grid gap-8 sm:grid-cols-[minmax(0,18rem)_1fr]">
-        <div className="aspect-[3/4] overflow-hidden rounded-xl bg-stone-100 dark:bg-stone-800">
-          {item.imagePath ? (
-            // eslint-disable-next-line @next/next/no-img-element -- private blob, proxied
-            <img
-              src={`/api/photo/${item.imagePath}`}
-              alt={item.name}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center text-sm text-stone-400">
-              No photo yet
-            </div>
-          )}
-        </div>
+      <div className="mt-6 grid gap-10 sm:grid-cols-[minmax(0,19rem)_1fr]">
+        <ItemPhoto
+          name={item.name}
+          imagePath={item.imagePath}
+          category={item.category}
+          className="aspect-[4/5] rounded-2xl"
+          garmentClassName="h-[72%] w-[62%]"
+          eager
+        />
 
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{item.name}</h1>
-          <p className="mt-1 text-stone-500 dark:text-stone-400">
-            {item.brand ?? "No brand recorded"} ·{" "}
-            <span className="capitalize">{item.category}</span>
-            {item.tags.length > 0 && <> · {item.tags.join(", ")}</>}
-          </p>
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-1.5">
+            <h1 className="font-serif text-3xl leading-tight tracking-tight">
+              {item.name}
+            </h1>
+            <p className="text-muted text-sm">
+              {item.brand ?? "No brand recorded"} ·{" "}
+              <span className="capitalize">{item.category}</span>
+            </p>
+            {item.tags.length > 0 && (
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {item.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="border-hair text-muted rounded-full border px-2.5 py-0.5 text-xs"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
 
           {item.needsReview && (
-            <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200">
+            <div className="border-cpw-bad/30 bg-cpw-bad/5 text-cpw-bad rounded-xl border px-4 py-3 text-sm">
               Imported with missing or conflicting data.
               {item.importConflicts != null && (
-                <pre className="mt-1 overflow-x-auto text-xs opacity-80">
+                <pre className="text-ink/70 mt-2 overflow-x-auto text-xs">
                   {JSON.stringify(item.importConflicts, null, 1)}
                 </pre>
               )}
             </div>
           )}
 
-          <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
+          {/* Cost per wear is the number this whole app exists to produce, so it
+              gets its own block rather than a slot in the stat row. */}
+          <div className="border-hair flex flex-col gap-2.5 rounded-2xl border bg-card px-5 py-4">
+            <p className="eyebrow">Cost per wear</p>
+            <CostPerWearBar
+              costPerWearCents={costPerWearCents}
+              timesWorn={timesWorn}
+              costCents={item.costCents}
+              size="lg"
+            />
+          </div>
+
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3">
             <Stat label="Times worn" value={String(timesWorn)} />
-            <Stat label="Cost per wear" value={cpw ?? "—"} />
-            <Stat label="Cost" value={cost ?? "unrecorded"} />
-            <Stat label="Acquired" value={acquired ?? "unknown"} />
+            <Stat label="Cost" value={money(item.costCents) ?? "Unrecorded"} />
+            <Stat label="Acquired" value={acquired ?? "Unknown"} />
           </dl>
 
           {timesWorn > 0 && (
-            <p className="mt-4 text-sm text-stone-500 dark:text-stone-400">
+            <p className="text-muted text-sm tabular-nums">
               First worn {firstWorn} · last worn {lastWorn}
             </p>
           )}
 
           {item.notes && (
-            <p className="mt-4 rounded-lg bg-stone-100 px-3 py-2 text-sm dark:bg-stone-800">
-              {item.notes}
-            </p>
+            <p className="bg-tile rounded-xl px-4 py-3 text-sm">{item.notes}</p>
           )}
 
           {item.productUrl && (
@@ -98,7 +107,7 @@ export default async function ItemPage({
               href={item.productUrl}
               target="_blank"
               rel="noreferrer"
-              className="mt-4 inline-block text-sm underline underline-offset-4"
+              className="text-sage self-start text-sm underline underline-offset-4"
             >
               Original product page ↗
             </a>
@@ -106,38 +115,9 @@ export default async function ItemPage({
         </div>
       </div>
 
-      <section className="mt-10">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-stone-500 dark:text-stone-400">
-          Wear history
-        </h2>
-        {history.length === 0 ? (
-          <p className="mt-3 text-sm text-stone-500">Never worn.</p>
-        ) : (
-          <div className="mt-3 space-y-4">
-            {[...byYear.entries()]
-              .sort((a, b) => b[0].localeCompare(a[0]))
-              .map(([year, dates]) => (
-                <div key={year}>
-                  <p className="text-sm font-medium">
-                    {year}{" "}
-                    <span className="font-normal text-stone-500">
-                      · {dates.length} {dates.length === 1 ? "wear" : "wears"}
-                    </span>
-                  </p>
-                  <div className="mt-1.5 flex flex-wrap gap-1">
-                    {dates.map((d) => (
-                      <span
-                        key={d}
-                        className="rounded bg-stone-100 px-1.5 py-0.5 text-xs tabular-nums text-stone-600 dark:bg-stone-800 dark:text-stone-300"
-                      >
-                        {d.slice(5)}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
-          </div>
-        )}
+      <section className="border-hair mt-12 border-t pt-6">
+        <h2 className="eyebrow">Wear history</h2>
+        <WearHistory dates={history.map((w) => w.wornOn)} />
       </section>
     </main>
   );
@@ -145,11 +125,9 @@ export default async function ItemPage({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <dt className="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">
-        {label}
-      </dt>
-      <dd className="mt-0.5 text-lg font-medium tabular-nums">{value}</dd>
+    <div className="flex flex-col gap-1">
+      <dt className="eyebrow">{label}</dt>
+      <dd className="font-serif text-xl tabular-nums">{value}</dd>
     </div>
   );
 }
