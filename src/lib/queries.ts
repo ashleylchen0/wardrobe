@@ -1,9 +1,11 @@
 import { and, asc, desc, eq, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { category, items, itemStats, wears } from "@/db/schema";
+import { items, itemStats, wears } from "@/db/schema";
+import type { Category } from "@/lib/categories";
 
-export const CATEGORIES = category.enumValues;
-export type Category = (typeof CATEGORIES)[number];
+// Re-exported for server callers. Client components must import these from
+// "@/lib/categories" directly — this module opens a database connection.
+export { CATEGORIES, isCategory, type Category } from "@/lib/categories";
 
 export const SORTS = {
   cpw: "Cost per wear",
@@ -13,10 +15,6 @@ export const SORTS = {
   name: "Name",
 } as const;
 export type Sort = keyof typeof SORTS;
-
-export function isCategory(v: string | undefined): v is Category {
-  return !!v && (CATEGORIES as readonly string[]).includes(v);
-}
 
 export function isSort(v: string | undefined): v is Sort {
   return !!v && v in SORTS;

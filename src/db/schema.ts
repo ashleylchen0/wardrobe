@@ -13,22 +13,17 @@ import {
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
+import { CATEGORIES } from "../lib/categories";
 
 /**
  * Garment type. The spreadsheet used ten overlapping values — `Pants` and
  * `Jeans` both alongside `Bottoms`, and `Workout` describing use rather than
  * garment. Pants folds into bottoms; workout becomes a tag.
+ *
+ * Values come from `lib/categories` (relative import so the migration scripts
+ * resolve it without the `@/` alias) which carries no database dependency.
  */
-export const category = pgEnum("category", [
-  "tops",
-  "sweaters",
-  "bottoms",
-  "jeans",
-  "dresses",
-  "outerwear",
-  "shoes",
-  "accessories",
-]);
+export const category = pgEnum("category", CATEGORIES);
 
 /**
  * How much of `acquiredOn` is real. The sheet had 162 full dates, 36 entries

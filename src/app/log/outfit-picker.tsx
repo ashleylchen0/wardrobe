@@ -3,7 +3,8 @@
 import { useMemo, useOptimistic, useState, useTransition } from "react";
 import { ItemPhoto } from "@/components/item-photo";
 import { moneyFromNumeric } from "@/lib/format";
-import { CATEGORIES, type Category, type PickableItem } from "@/lib/queries";
+import { CATEGORIES, type Category } from "@/lib/categories";
+import type { PickableItem } from "@/lib/queries";
 import { setWear } from "./actions";
 
 export function OutfitPicker({

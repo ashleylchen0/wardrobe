@@ -1,5 +1,5 @@
 import { Garment } from "@/components/garment";
-import type { Category } from "@/lib/queries";
+import type { Category } from "@/lib/categories";
 
 /**
  * The item's photo when there is one, and category artwork when there isn't.

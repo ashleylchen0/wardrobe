@@ -1,4 +1,4 @@
-import type { Category } from "@/lib/queries";
+import type { Category } from "@/lib/categories";
 
 /**
  * Stand-in artwork for items with no photo yet. Shape and tint both come from
