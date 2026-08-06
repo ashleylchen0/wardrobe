@@ -1,4 +1,4 @@
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { category, items, itemStats, wears } from "@/db/schema";
 
@@ -22,12 +22,21 @@ export function isSort(v: string | undefined): v is Sort {
   return !!v && v in SORTS;
 }
 
+export const STATUSES = ["active", "archived"] as const;
+export type Status = (typeof STATUSES)[number];
+
+export function isStatus(v: string | undefined): v is Status {
+  return !!v && (STATUSES as readonly string[]).includes(v);
+}
+
 export async function getClosetItems({
   category: cat,
   sort = "worn",
+  status = "active",
 }: {
   category?: Category;
   sort?: Sort;
+  status?: Status;
 }) {
   // Items with no cost, or never worn, have no cost per wear — they sort last
   // rather than masquerading as $0.00.
@@ -49,6 +58,8 @@ export async function getClosetItems({
       costCents: items.costCents,
       imagePath: items.imagePath,
       needsReview: items.needsReview,
+      status: items.status,
+      archivedOn: items.archivedOn,
       timesWorn: itemStats.timesWorn,
       costPerWearCents: itemStats.costPerWearCents,
       lastWorn: itemStats.lastWorn,
@@ -57,17 +68,27 @@ export async function getClosetItems({
     .innerJoin(itemStats, eq(itemStats.itemId, items.id))
     .$dynamic();
 
-  if (cat) query.where(eq(items.category, cat));
+  query.where(cat ? and(eq(items.status, status), eq(items.category, cat)) : eq(items.status, status));
 
   return query.orderBy(...orderBy);
 }
 
-export async function getCategoryCounts() {
+/** Counts within the given status, so the chips match what the grid will show. */
+export async function getCategoryCounts(status: Status = "active") {
   const rows = await db
     .select({ category: items.category, count: sql<number>`count(*)::int` })
     .from(items)
+    .where(eq(items.status, status))
     .groupBy(items.category);
   return new Map(rows.map((r) => [r.category, r.count]));
+}
+
+export async function getStatusCounts() {
+  const rows = await db
+    .select({ status: items.status, count: sql<number>`count(*)::int` })
+    .from(items)
+    .groupBy(items.status);
+  return new Map(rows.map((r) => [r.status, r.count]));
 }
 
 export async function getItem(id: string) {

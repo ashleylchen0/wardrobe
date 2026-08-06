@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { money, moneyFromNumeric } from "@/lib/format";
 import { getItem } from "@/lib/queries";
+import { setArchived } from "../actions";
 
 export default async function ItemPage({
   params,
@@ -56,12 +57,25 @@ export default async function ItemPage({
         </div>
 
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{item.name}</h1>
-          <p className="mt-1 text-stone-500 dark:text-stone-400">
-            {item.brand ?? "No brand recorded"} ·{" "}
-            <span className="capitalize">{item.category}</span>
-            {item.tags.length > 0 && <> · {item.tags.join(", ")}</>}
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">{item.name}</h1>
+              <p className="mt-1 text-stone-500 dark:text-stone-400">
+                {item.brand ?? "No brand recorded"} ·{" "}
+                <span className="capitalize">{item.category}</span>
+                {item.tags.length > 0 && <> · {item.tags.join(", ")}</>}
+              </p>
+            </div>
+            <ArchiveButton id={item.id} archived={item.status === "archived"} />
+          </div>
+
+          {item.status === "archived" && (
+            <p className="mt-3 rounded-lg bg-stone-100 px-3 py-2 text-sm text-stone-600 dark:bg-stone-800 dark:text-stone-300">
+              No longer in your closet
+              {item.archivedOn && <> — archived {item.archivedOn}</>}. Its wear
+              history still counts toward cost per wear.
+            </p>
+          )}
 
           {item.needsReview && (
             <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200">
@@ -140,6 +154,24 @@ export default async function ItemPage({
         )}
       </section>
     </main>
+  );
+}
+
+function ArchiveButton({ id, archived }: { id: string; archived: boolean }) {
+  async function toggle() {
+    "use server";
+    await setArchived(id, !archived);
+  }
+
+  return (
+    <form action={toggle}>
+      <button
+        type="submit"
+        className="rounded-lg border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-100 dark:border-stone-700 dark:hover:bg-stone-800"
+      >
+        {archived ? "Move back to closet" : "Archive"}
+      </button>
+    </form>
   );
 }
 

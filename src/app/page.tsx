@@ -5,8 +5,10 @@ import {
   SORTS,
   getCategoryCounts,
   getClosetItems,
+  getStatusCounts,
   isCategory,
   isSort,
+  isStatus,
   type ClosetItem,
 } from "@/lib/queries";
 
@@ -15,24 +17,28 @@ export const metadata = { title: "Closet · Wardrobe" };
 export default async function ClosetPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; sort?: string }>;
+  searchParams: Promise<{ category?: string; sort?: string; status?: string }>;
 }) {
   const params = await searchParams;
   const category = isCategory(params.category) ? params.category : undefined;
   const sort = isSort(params.sort) ? params.sort : "worn";
+  const status = isStatus(params.status) ? params.status : "active";
 
-  const [itemList, counts] = await Promise.all([
-    getClosetItems({ category, sort }),
-    getCategoryCounts(),
+  const [itemList, counts, statusCounts] = await Promise.all([
+    getClosetItems({ category, sort, status }),
+    getCategoryCounts(status),
+    getStatusCounts(),
   ]);
 
   const total = [...counts.values()].reduce((a, b) => a + b, 0);
-  const href = (next: { category?: string; sort?: string }) => {
+  const href = (next: { category?: string; sort?: string; status?: string }) => {
     const sp = new URLSearchParams();
     const c = next.category ?? category;
     const s = next.sort ?? sort;
+    const st = next.status ?? status;
     if (c) sp.set("category", c);
     if (s !== "worn") sp.set("sort", s);
+    if (st !== "active") sp.set("status", st);
     const qs = sp.toString();
     return qs ? `/?${qs}` : "/";
   };
@@ -40,11 +46,23 @@ export default async function ClosetPage({
   return (
     <main className="mx-auto max-w-7xl px-5 py-8">
       <header className="mb-6 flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Closet</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {status === "archived" ? "Archived" : "Closet"}
+        </h1>
         <p className="text-sm text-stone-500 dark:text-stone-400">
           {itemList.length} of {total} items
         </p>
       </header>
+
+      {/* Status is a separate axis from category — an archived item still has one. */}
+      <nav className="mb-3 flex gap-2 text-sm" aria-label="Filter by status">
+        <StatusTab href={href({ status: "active", category: "" })} active={status === "active"}>
+          In closet {statusCounts.get("active") ?? 0}
+        </StatusTab>
+        <StatusTab href={href({ status: "archived", category: "" })} active={status === "archived"}>
+          Archived {statusCounts.get("archived") ?? 0}
+        </StatusTab>
+      </nav>
 
       <nav className="mb-4 flex flex-wrap gap-2" aria-label="Filter by category">
         <FilterChip href={href({ category: "" })} active={!category}>
@@ -81,9 +99,36 @@ export default async function ClosetPage({
       </ul>
 
       {itemList.length === 0 && (
-        <p className="py-16 text-center text-stone-500">Nothing in this category yet.</p>
+        <p className="py-16 text-center text-stone-500">
+          {status === "archived"
+            ? "Nothing archived yet. Open an item and choose Archive when you donate or sell it."
+            : "Nothing in this category yet."}
+        </p>
       )}
     </main>
+  );
+}
+
+function StatusTab({
+  href,
+  active,
+  children,
+}: {
+  href: string;
+  active: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`rounded-lg px-3 py-1.5 font-medium transition-colors ${
+        active
+          ? "bg-stone-200 text-stone-900 dark:bg-stone-700 dark:text-stone-50"
+          : "text-stone-500 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
+      }`}
+    >
+      {children}
+    </Link>
   );
 }
 
@@ -117,7 +162,11 @@ function ItemCard({ item }: { item: ClosetItem }) {
   return (
     <li>
       <Link href={`/items/${item.id}`} className="group block">
-        <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-stone-100 dark:bg-stone-800">
+        <div
+          className={`relative aspect-[3/4] overflow-hidden rounded-xl bg-stone-100 dark:bg-stone-800 ${
+            item.status === "archived" ? "opacity-55 grayscale" : ""
+          }`}
+        >
           {item.imagePath ? (
             // eslint-disable-next-line @next/next/no-img-element -- private blob, proxied
             <img
@@ -153,6 +202,11 @@ function ItemCard({ item }: { item: ClosetItem }) {
             {cpw && <> · {cpw}/wear</>}
             {!cpw && cost === "$0.00" && <> · free</>}
           </p>
+          {item.status === "archived" && item.archivedOn && (
+            <p className="text-xs text-stone-400 dark:text-stone-500">
+              Archived {item.archivedOn}
+            </p>
+          )}
         </div>
       </Link>
     </li>

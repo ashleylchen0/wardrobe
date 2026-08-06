@@ -68,7 +68,9 @@ export const items = pgTable(
     imagePath: text("image_path"),
     productUrl: text("product_url"),
 
+    /** Archived = donated, sold, or otherwise gone. Wear history is kept. */
     status: itemStatus("status").notNull().default("active"),
+    archivedOn: date("archived_on"),
 
     /** Set on import where source sheets disagreed; drives the review screen. */
     needsReview: boolean("needs_review").notNull().default(false),
