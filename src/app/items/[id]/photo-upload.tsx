@@ -65,13 +65,13 @@ export function PhotoUpload({
   const busy = working || pending;
 
   return (
-    <div className="mt-3 space-y-2">
+    <div className="flex flex-col gap-2">
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
           disabled={busy}
           onClick={() => inputRef.current?.click()}
-          className="rounded-lg border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-100 disabled:opacity-50 dark:border-stone-700 dark:hover:bg-stone-800"
+          className="border-hair hover:border-ink rounded-full border px-4 py-1.5 text-xs transition-colors disabled:opacity-50"
         >
           {busy ? "Uploading…" : hasPhoto ? "Replace photo" : "Upload photo"}
         </button>
@@ -84,7 +84,7 @@ export function PhotoUpload({
                 await removePhoto(itemId);
               })
             }
-            className="rounded-lg px-3 py-1.5 text-sm text-stone-500 hover:text-red-600 dark:text-stone-400"
+            className="text-muted hover:text-cpw-bad rounded-full px-3 py-1.5 text-xs transition-colors"
           >
             Remove
           </button>
@@ -102,7 +102,7 @@ export function PhotoUpload({
         }}
       />
 
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="text-cpw-bad text-xs">{error}</p>}
     </div>
   );
 }
