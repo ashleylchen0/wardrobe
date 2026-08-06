@@ -1,13 +1,17 @@
-import { head } from "@vercel/blob";
+import { get } from "@vercel/blob";
 import { getSession } from "@/lib/auth";
 
 /**
- * Serves photos from the private Blob store. Middleware already gates this
+ * Serves photos from the private Blob store. `proxy.ts` already gates this
  * route; the session check here is belt-and-braces so a matcher change can't
  * silently expose the store.
  *
- * Blob pathnames carry a random suffix and are never reused, so the response
- * is immutable — but `private` keeps it out of any shared cache.
+ * Private blobs are not fetchable by URL — a plain GET returns 403 — so this
+ * uses `get(pathname, { access: "private" })`, which authenticates with the
+ * store and hands back a stream.
+ *
+ * Blob pathnames carry a random suffix and are never reused, so responses are
+ * immutable; `private` keeps them out of any shared cache.
  */
 export async function GET(
   _request: Request,
@@ -21,16 +25,13 @@ export async function GET(
   const pathname = path.map(decodeURIComponent).join("/");
 
   try {
-    const blob = await head(pathname);
-    const upstream = await fetch(blob.downloadUrl);
-    if (!upstream.ok || !upstream.body) {
-      return new Response("Not found", { status: 404 });
-    }
+    const result = await get(pathname, { access: "private" });
+    if (!result) return new Response("Not found", { status: 404 });
 
-    return new Response(upstream.body, {
+    return new Response(result.stream, {
       headers: {
-        "Content-Type": blob.contentType ?? "application/octet-stream",
-        "Content-Length": String(blob.size),
+        "Content-Type": result.blob.contentType ?? "application/octet-stream",
+        "Content-Length": String(result.blob.size),
         "Cache-Control": "private, max-age=31536000, immutable",
       },
     });

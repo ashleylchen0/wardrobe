@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { getSession } from "@/lib/auth";
@@ -31,12 +32,15 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         {signedIn && (
           <header className="border-b border-stone-200 dark:border-stone-800">
             <nav className="mx-auto flex max-w-7xl items-center gap-5 px-5 py-3 text-sm">
-              <a href="/" className="font-semibold">
+              <Link href="/" className="font-semibold">
                 Wardrobe
-              </a>
-              <a href="/" className="text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100">
+              </Link>
+              <Link
+                href="/"
+                className="text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100"
+              >
                 Closet
-              </a>
+              </Link>
               <SignOutButton />
             </nav>
           </header>

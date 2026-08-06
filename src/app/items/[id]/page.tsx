@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { money, moneyFromNumeric } from "@/lib/format";
 import { getItem } from "@/lib/queries";
 import { setArchived } from "../actions";
+import { PhotoUpload } from "./photo-upload";
 
 export default async function ItemPage({
   params,
@@ -41,19 +42,22 @@ export default async function ItemPage({
       </Link>
 
       <div className="mt-5 grid gap-8 sm:grid-cols-[minmax(0,18rem)_1fr]">
-        <div className="aspect-[3/4] overflow-hidden rounded-xl bg-stone-100 dark:bg-stone-800">
-          {item.imagePath ? (
-            // eslint-disable-next-line @next/next/no-img-element -- private blob, proxied
-            <img
-              src={`/api/photo/${item.imagePath}`}
-              alt={item.name}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center text-sm text-stone-400">
-              No photo yet
-            </div>
-          )}
+        <div>
+          <div className="aspect-[3/4] overflow-hidden rounded-xl bg-stone-100 dark:bg-stone-800">
+            {item.imagePath ? (
+              // eslint-disable-next-line @next/next/no-img-element -- private blob, proxied
+              <img
+                src={`/api/photo/${item.imagePath}`}
+                alt={item.name}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-stone-400">
+                No photo yet
+              </div>
+            )}
+          </div>
+          <PhotoUpload itemId={item.id} hasPhoto={!!item.imagePath} />
         </div>
 
         <div>
