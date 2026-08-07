@@ -1,31 +1,35 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRef, useState } from "react";
+import { DEFAULT_SORT, SORTS } from "@/lib/sorts";
 
 /**
- * Sort lives in a select rather than a row of links: eight labels laid out
- * flat crowded the filter row, and only one of them is ever active.
- *
- * Labels are duplicated here rather than imported from `queries.ts`, which
- * opens a database connection at module load and cannot be pulled into a
- * client bundle. `SORTS` there remains the source of truth for the keys.
+ * Search, sort and the grid/list switch. Each writes to the URL rather than to
+ * local state, so a filtered closet is a link you can keep — and the server
+ * does the filtering, which matters at 230 items with photos.
  */
-const SORT_LABELS: [string, string][] = [
-  ["worn", "Most worn"],
-  ["recent", "Recently worn"],
-  ["cpw", "Cost/wear low → high"],
-  ["cost", "Cost"],
-  ["brand", "Brand"],
-  ["name", "Name"],
-];
-
-/** Matches the default in `ClosetPage`, and so is the value we omit from the URL. */
-const DEFAULT_SORT = "worn";
-
-export function ClosetToolbar({ sort }: { sort: string }) {
+export function ClosetToolbar({
+  sort,
+  q,
+  view,
+}: {
+  sort: string;
+  q: string;
+  view: "grid" | "list";
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [query, setQuery] = useState(q);
+  const [prevQ, setPrevQ] = useState(q);
+  const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Adopt a q changed from outside — the back button, or a cleared filter.
+  if (prevQ !== q) {
+    setPrevQ(q);
+    setQuery(q);
+  }
 
   const patch = (key: string, value: string | null) => {
     const params = new URLSearchParams(searchParams);
@@ -36,8 +40,24 @@ export function ClosetToolbar({ sort }: { sort: string }) {
   };
 
   return (
-    <div className="flex items-center gap-3">
-      <span className="microcap text-muted text-[10px]">Sort</span>
+    <div className="flex flex-wrap items-center gap-4">
+      <input
+        type="search"
+        value={query}
+        placeholder="Search"
+        aria-label="Search items"
+        onChange={(e) => {
+          const v = e.target.value;
+          setQuery(v);
+          // Typing shouldn't fire a query per keystroke, but it also shouldn't
+          // feel laggy: a quarter second is under the threshold where you
+          // notice waiting.
+          if (debounce.current) clearTimeout(debounce.current);
+          debounce.current = setTimeout(() => patch("q", v.trim() || null), 250);
+        }}
+        className="border-hair focus:border-ink w-28 border-b bg-transparent py-1 text-[12px] outline-none sm:w-40"
+      />
+
       <select
         value={sort}
         aria-label="Sort items"
@@ -46,12 +66,21 @@ export function ClosetToolbar({ sort }: { sort: string }) {
         }
         className="microcap border-hair focus:border-ink cursor-pointer border-b bg-transparent py-1 text-[10px] outline-none"
       >
-        {SORT_LABELS.map(([value, label]) => (
+        {Object.entries(SORTS).map(([value, label]) => (
           <option key={value} value={value}>
             {label}
           </option>
         ))}
       </select>
+
+      <button
+        type="button"
+        onClick={() => patch("view", view === "list" ? null : "list")}
+        aria-pressed={view === "list"}
+        className="microcap text-muted hover:text-ink cursor-pointer pb-0.5 text-[10px]"
+      >
+        {view === "list" ? "Grid" : "List"}
+      </button>
     </div>
   );
 }

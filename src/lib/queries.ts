@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { items, itemStats, wears } from "@/db/schema";
 import type { Category } from "@/lib/categories";
@@ -7,19 +7,10 @@ import type { Category } from "@/lib/categories";
 // "@/lib/categories" directly — this module opens a database connection.
 export { CATEGORIES, isCategory, type Category } from "@/lib/categories";
 
-export const SORTS = {
-  worn: "Most worn",
-  recent: "Recently worn",
-  cpw: "Cost/wear low → high",
-  cost: "Cost",
-  brand: "Brand",
-  name: "Name",
-} as const;
-export type Sort = keyof typeof SORTS;
-
-export function isSort(v: string | undefined): v is Sort {
-  return !!v && v in SORTS;
-}
+// Re-exported for server callers; the definitions live in a driver-free module
+// so the toolbar can import them too.
+import type { Sort } from "@/lib/sorts";
+export { SORTS, DEFAULT_SORT, isSort, type Sort } from "@/lib/sorts";
 
 export const STATUSES = ["active", "archived"] as const;
 export type Status = (typeof STATUSES)[number];
@@ -32,20 +23,25 @@ export async function getClosetItems({
   category: cat,
   sort = "worn",
   status = "active",
+  q,
 }: {
   category?: Category;
   sort?: Sort;
   status?: Status;
+  q?: string;
 }) {
   // Items with no cost, or never worn, have no cost per wear — they sort last
   // rather than masquerading as $0.00.
   const orderBy = {
     cpw: [sql`${itemStats.costPerWearCents} ASC NULLS LAST`],
+    "cpw-desc": [sql`${itemStats.costPerWearCents} DESC NULLS LAST`],
     worn: [desc(itemStats.timesWorn), asc(items.name)],
+    "worn-asc": [asc(itemStats.timesWorn), asc(items.name)],
     // Never-worn items have no last wear date; they belong at the end rather
     // than at the top of a list about recency.
     recent: [sql`${itemStats.lastWorn} DESC NULLS LAST`, asc(items.name)],
     cost: [sql`${items.costCents} DESC NULLS LAST`],
+    newest: [sql`${items.acquiredOn} DESC NULLS LAST`, asc(items.name)],
     brand: [sql`${items.brand} ASC NULLS LAST`, asc(items.name)],
     name: [asc(items.name)],
   }[sort];
@@ -70,7 +66,18 @@ export async function getClosetItems({
     .innerJoin(itemStats, eq(itemStats.itemId, items.id))
     .$dynamic();
 
-  query.where(cat ? and(eq(items.status, status), eq(items.category, cat)) : eq(items.status, status));
+  // Search covers name and brand, which is what you actually remember about a
+  // garment. `%` and `_` are escaped so a literal one doesn't become a wildcard.
+  const term = q?.trim();
+  const like = term ? `%${term.replace(/[\\%_]/g, (c) => `\\${c}`)}%` : null;
+
+  query.where(
+    and(
+      eq(items.status, status),
+      cat ? eq(items.category, cat) : undefined,
+      like ? or(ilike(items.name, like), ilike(items.brand, like)) : undefined,
+    ),
+  );
 
   return query.orderBy(...orderBy);
 }
