@@ -3,25 +3,56 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { CATEGORIES, type Category } from "@/lib/categories";
-import { createItem } from "@/app/items/new-item-actions";
+import { createItem, updateItem } from "@/app/items/item-actions";
 import { fetchProductImage } from "@/app/items/product-image";
 
+/** The fields this form can edit, as the detail page has them. */
+export type EditableItem = {
+  id: string;
+  name: string;
+  brand: string | null;
+  category: Category;
+  costCents: number | null;
+  acquiredOn: string | null;
+  acquiredPrecision: string | null;
+  tags: string[];
+  productUrl: string | null;
+  notes: string | null;
+};
+
 /**
- * The full add-item form. Only name and category are required — 60 of the
- * imported items have no cost and 29 no date, so demanding either would be the
- * wrong shape for how this wardrobe actually gets recorded.
+ * The full item form, used both to add and to edit. Only name and category are
+ * required — 60 of the imported items have no cost and 29 no date, so demanding
+ * either would be the wrong shape for how this wardrobe actually gets recorded.
+ *
+ * Passing `item` switches it to editing that item; `onSaved` lets the caller
+ * close the disclosure it sits in.
  */
-export function ItemForm({ brands }: { brands: string[] }) {
+export function ItemForm({
+  brands,
+  item,
+  onSaved,
+}: {
+  brands: string[];
+  item?: EditableItem;
+  onSaved?: () => void;
+}) {
+  const editing = item !== undefined;
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [pending, startTransition] = useTransition();
-  const [category, setCategory] = useState<Category>("tops");
+  const [category, setCategory] = useState<Category>(item?.category ?? "tops");
   const [error, setError] = useState<string | null>(null);
   const [suggestion, setSuggestion] = useState<string | null>(null);
-  const [productUrl, setProductUrl] = useState("");
+  const [productUrl, setProductUrl] = useState(item?.productUrl ?? "");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageNote, setImageNote] = useState<string | null>(null);
   const [fetching, setFetching] = useState(false);
+
+  // A date input can only hold a full date, so a year-only acquisition shows as
+  // blank. The action preserves it unless a real date is chosen here.
+  const acquiredValue =
+    item?.acquiredPrecision === "day" ? (item.acquiredOn ?? "") : "";
 
   async function grabImage() {
     setFetching(true);
@@ -55,9 +86,18 @@ export function ItemForm({ brands }: { brands: string[] }) {
     if (imageUrl) formData.set("imageUrl", imageUrl);
 
     startTransition(async () => {
-      const result = await createItem(formData);
+      const result = item
+        ? await updateItem(item.id, formData)
+        : await createItem(formData);
+
       if (result.ok) {
-        router.push(`/items/${result.id}`);
+        if (item) {
+          setImageUrl(null);
+          router.refresh();
+          onSaved?.();
+        } else {
+          router.push(`/items/${result.id}`);
+        }
         return;
       }
       setError(result.error);
@@ -81,7 +121,8 @@ export function ItemForm({ brands }: { brands: string[] }) {
         <input
           name="name"
           required
-          autoFocus
+          autoFocus={!editing}
+          defaultValue={item?.name}
           maxLength={120}
           className="border-hair focus:border-ink w-full border bg-card px-3 py-2 text-sm outline-none"
         />
@@ -92,6 +133,7 @@ export function ItemForm({ brands }: { brands: string[] }) {
           <input
             name="brand"
             list="brand-options"
+            defaultValue={item?.brand ?? ""}
             maxLength={80}
             className="border-hair focus:border-ink w-full border bg-card px-3 py-2 text-sm outline-none"
           />
@@ -108,7 +150,9 @@ export function ItemForm({ brands }: { brands: string[] }) {
             <input
               name="cost"
               inputMode="decimal"
-              placeholder=""
+              defaultValue={
+                item?.costCents != null ? (item.costCents / 100).toFixed(2) : ""
+              }
               className="w-full bg-transparent text-sm outline-none"
             />
           </div>
@@ -136,10 +180,18 @@ export function ItemForm({ brands }: { brands: string[] }) {
       </Field>
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Acquired" hint="Opens a calendar — leave blank if unknown">
+        <Field
+          label="Acquired"
+          hint={
+            editing && item?.acquiredPrecision === "year"
+              ? `Recorded as ${item.acquiredOn?.slice(0, 4)} — year only, which a date field can't show. Leave blank to keep it.`
+              : "Opens a calendar — leave blank if unknown"
+          }
+        >
           <input
             type="date"
             name="acquiredOn"
+            defaultValue={acquiredValue}
             max={new Date().toISOString().slice(0, 10)}
             className="border-hair focus:border-ink w-full border bg-card px-3 py-2 text-sm tabular-nums outline-none"
           />
@@ -148,6 +200,7 @@ export function ItemForm({ brands }: { brands: string[] }) {
         <Field label="Tags" hint="Comma separated, e.g. workout">
           <input
             name="tags"
+            defaultValue={item?.tags.join(", ") ?? ""}
             className="border-hair focus:border-ink w-full border bg-card px-3 py-2 text-sm outline-none"
           />
         </Field>
@@ -185,7 +238,8 @@ export function ItemForm({ brands }: { brands: string[] }) {
           <div className="flex flex-col gap-1 text-sm">
             <span>Found a photo on that page.</span>
             <span className="text-muted text-xs">
-              It gets copied into your storage when you add the item.
+              It gets copied into your storage when you{" "}
+              {editing ? "save" : "add the item"}.
             </span>
           </div>
           <button
@@ -205,6 +259,7 @@ export function ItemForm({ brands }: { brands: string[] }) {
       <Field label="Notes">
         <textarea
           name="notes"
+          defaultValue={item?.notes ?? ""}
           rows={2}
           maxLength={500}
           className="border-hair focus:border-ink w-full resize-y border bg-card px-3 py-2 text-sm outline-none"
@@ -232,10 +287,18 @@ export function ItemForm({ brands }: { brands: string[] }) {
           disabled={pending}
           className="bg-ink hover:bg-ink/90 px-5 py-2 text-sm font-medium text-paper transition-colors disabled:opacity-50"
         >
-          {pending ? "Adding…" : "Add to closet"}
+          {pending
+            ? editing
+              ? "Saving…"
+              : "Adding…"
+            : editing
+              ? "Save changes"
+              : "Add to closet"}
         </button>
         <p className="text-muted text-xs">
-          You can add a photo on the next screen.
+          {editing
+            ? "Wear history and photo are unaffected."
+            : "You can add a photo on the next screen."}
         </p>
       </div>
     </form>

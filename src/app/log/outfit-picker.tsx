@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useOptimistic, useState, useTransition } from "react";
-import { createItem } from "@/app/items/new-item-actions";
+import { createItem } from "@/app/items/item-actions";
 import { moneyFromNumeric } from "@/lib/format";
 import { CATEGORIES, type Category } from "@/lib/categories";
 import type { PickableItem } from "@/lib/queries";

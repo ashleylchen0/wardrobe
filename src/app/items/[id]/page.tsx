@@ -4,6 +4,8 @@ import { CostPerWear } from "@/components/cost-per-wear";
 import { ItemPhoto } from "@/components/item-photo";
 import { fmtDate, money } from "@/lib/format";
 import { getItem } from "@/lib/queries";
+import { getBrands } from "../item-actions";
+import { EditPanel } from "./edit-panel";
 import { setArchived } from "../actions";
 import { PhotoUpload } from "./photo-upload";
 
@@ -23,6 +25,8 @@ export default async function ItemPage({
   const { id } = await params;
   const data = await getItem(id);
   if (!data) notFound();
+
+  const brands = await getBrands();
 
   const { item, timesWorn, costPerWearCents, firstWorn, lastWorn, history } = data;
   const archived = item.status === "archived";
@@ -216,7 +220,22 @@ export default async function ItemPage({
             </div>
           )}
 
-          <div className="border-hair mt-10 border-t pt-3">
+          <div className="border-hair mt-10 flex items-baseline gap-5 border-t pt-3">
+            <EditPanel
+              brands={brands}
+              item={{
+                id: item.id,
+                name: item.name,
+                brand: item.brand,
+                category: item.category,
+                costCents: item.costCents,
+                acquiredOn: item.acquiredOn,
+                acquiredPrecision: item.acquiredPrecision,
+                tags: item.tags,
+                productUrl: item.productUrl,
+                notes: item.notes,
+              }}
+            />
             <ArchiveButton id={item.id} archived={archived} />
           </div>
         </div>

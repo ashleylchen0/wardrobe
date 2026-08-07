@@ -1,7 +1,7 @@
 "use server";
 
 import { put } from "@vercel/blob";
-import { asc, eq, isNotNull } from "drizzle-orm";
+import { and, asc, eq, isNotNull, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db";
@@ -178,6 +178,121 @@ export async function createItem(formData: FormData): Promise<CreateResult> {
   revalidatePath("/");
   revalidatePath("/log");
   return { ok: true, id: created.id };
+}
+
+/**
+ * Edit an existing item. Same shape as `createItem`, with three differences
+ * that matter:
+ *
+ * - the name-collision check excludes the item itself, or saving without
+ *   renaming would always report a duplicate of itself;
+ * - `refineBottoms` is not applied — on create it guesses jeans from a name,
+ *   but here you have picked a category explicitly and a guess must not
+ *   overrule you;
+ * - a blank date field does not always mean "clear the date". 36 items were
+ *   imported knowing only the year, and a date input cannot show a year. Those
+ *   arrive with the field blank, so the original is preserved unless you
+ *   actively set a new one.
+ */
+export async function updateItem(
+  id: string,
+  formData: FormData,
+): Promise<CreateResult> {
+  if (!(await getSession())) throw new Error("Unauthorized");
+
+  const parsed = schema.safeParse({
+    name: formData.get("name") ?? "",
+    category: formData.get("category") ?? "",
+    brand: formData.get("brand") ?? undefined,
+    cost: formData.get("cost") ?? undefined,
+    acquiredOn: formData.get("acquiredOn") ?? "",
+    productUrl: formData.get("productUrl") ?? "",
+    notes: formData.get("notes") ?? undefined,
+    tags: formData.get("tags") ?? undefined,
+    imageUrl: formData.get("imageUrl") ?? "",
+  });
+
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the form." };
+  }
+  const v = parsed.data;
+
+  const [current] = await db
+    .select({
+      acquiredOn: items.acquiredOn,
+      acquiredPrecision: items.acquiredPrecision,
+      imagePath: items.imagePath,
+    })
+    .from(items)
+    .where(eq(items.id, id))
+    .limit(1);
+  if (!current) return { ok: false, error: "That item no longer exists." };
+
+  const key = nameKey(v.name);
+  const [clash] = await db
+    .select({ id: items.id, name: items.name })
+    .from(items)
+    .where(and(eq(items.nameKey, key), ne(items.id, id)))
+    .limit(1);
+
+  if (clash) {
+    return {
+      ok: false,
+      error: `You already have "${clash.name}".`,
+      suggestion: await suggestFreeName(v.name.trim()),
+    };
+  }
+
+  let costCents: number | null = null;
+  if (v.cost) {
+    const n = Number(v.cost.replace(/[$,\s]/g, ""));
+    if (!Number.isFinite(n) || n < 0) {
+      return { ok: false, error: "Cost should be a number, or left blank." };
+    }
+    costCents = Math.round(n * 100);
+  }
+
+  const tags = (v.tags ?? "")
+    .split(",")
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean);
+
+  // A year-only date survives an untouched form; anything else follows the field.
+  const keepYearOnly =
+    !v.acquiredOn && current.acquiredPrecision === "year" && current.acquiredOn;
+  const acquiredOn = v.acquiredOn || (keepYearOnly ? current.acquiredOn : null);
+  const acquiredPrecision = v.acquiredOn
+    ? "day"
+    : keepYearOnly
+      ? "year"
+      : "unknown";
+
+  // A newly fetched listing image replaces the stored one; a failed fetch
+  // leaves whatever was already there.
+  const fetched = v.imageUrl ? await storeRemoteImage(v.name, v.imageUrl) : null;
+
+  await db
+    .update(items)
+    .set({
+      name: v.name.trim(),
+      nameKey: key,
+      brand: v.brand || null,
+      category: v.category,
+      tags,
+      costCents,
+      acquiredOn,
+      acquiredPrecision,
+      productUrl: v.productUrl || null,
+      notes: v.notes || null,
+      imagePath: fetched ?? current.imagePath,
+    })
+    .where(eq(items.id, id));
+
+  revalidatePath("/");
+  revalidatePath("/log");
+  revalidatePath("/stats");
+  revalidatePath(`/items/${id}`);
+  return { ok: true, id };
 }
 
 /** Existing spellings, so the form autocompletes instead of inventing new ones. */

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ItemForm } from "@/components/item-form";
-import { getBrands } from "../new-item-actions";
+import { getBrands } from "../item-actions";
 
 export const metadata = { title: "Add an item · Wardrobe" };
 
