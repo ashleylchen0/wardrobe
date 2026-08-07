@@ -204,16 +204,29 @@ export async function getMonthCoverage(from: string, to: string) {
   const rows = await db
     .select({
       wornOn: wears.wornOn,
-      count: sql<number>`count(*)::int`,
-      categories: sql<string[]>`array_agg(distinct ${items.category}::text)`,
+      itemId: items.id,
+      name: items.name,
+      category: items.category,
+      imagePath: items.imagePath,
     })
     .from(wears)
     .innerJoin(items, eq(items.id, wears.itemId))
     .where(sql`${wears.wornOn} >= ${from} and ${wears.wornOn} <= ${to}`)
-    .groupBy(wears.wornOn);
+    .orderBy(asc(wears.wornOn), asc(items.name));
 
-  return new Map(rows.map((r) => [r.wornOn, r]));
+  const days = new Map<string, { count: number; entries: typeof rows }>();
+  for (const r of rows) {
+    const day = days.get(r.wornOn) ?? { count: 0, entries: [] };
+    day.count += 1;
+    day.entries.push(r);
+    days.set(r.wornOn, day);
+  }
+  return days;
 }
+
+export type MonthDay = NonNullable<
+  Awaited<ReturnType<typeof getMonthCoverage>> extends Map<string, infer V> ? V : never
+>;
 
 /** Logged-day totals per month, for the year strip and the header stats. */
 export async function getMonthlyTotals(year: number) {

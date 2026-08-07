@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ItemPhoto } from "@/components/item-photo";
 import {
   getLoggedYears,
   getMonthCoverage,
@@ -9,6 +10,9 @@ export const metadata = { title: "Calendar · Wardrobe" };
 
 const MONTH_RE = /^\d{4}-\d{2}$/;
 const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+/** A cell fits nine thumbnails; past that the count carries it. */
+const MAX_THUMBS = 9;
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const iso = (y: number, m: number, d: number) => `${y}-${pad(m)}-${pad(d)}`;
@@ -73,95 +77,87 @@ export default async function CalendarPage({
   const leadingBlanks = mondayIndex(year, month, 1);
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-6 py-10">
-      <div className="flex flex-col gap-8">
-        <header className="flex flex-col gap-5">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2">
-            <h1 className="font-serif text-3xl tracking-tight">
-              {monthLabel(year, month)}
-            </h1>
-            <p className="text-muted text-sm tabular-nums">
-              {logged} logged
-              {missed > 0 && <> · {missed} missed</>}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
+    <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
+      <div className="flex flex-col gap-5">
+        <div className="border-ink flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 border-b pb-2">
+          <h1 className="microcap text-[12px] font-bold">
+            {monthLabel(year, month)}
+          </h1>
+          <div className="flex items-baseline gap-4">
+            <span className="microcap text-muted text-[10px] tabular-nums">
+              {logged} logged{missed > 0 && <> · {missed} missed</>}
+            </span>
             <Link
               href={`/calendar?month=${prev.year}-${pad(prev.month)}`}
               aria-label="Previous month"
-              className="border-hair hover:border-ink border px-3 py-1.5 text-sm transition-colors"
+              className="microcap text-muted hover:text-ink text-[11px]"
             >
               ←
             </Link>
             <Link
               href={`/calendar?month=${next.year}-${pad(next.month)}`}
               aria-label="Next month"
-              className="border-hair hover:border-ink border px-3 py-1.5 text-sm transition-colors"
+              className="microcap text-muted hover:text-ink text-[11px]"
             >
               →
             </Link>
-            <div className="ml-2 flex flex-wrap gap-1.5">
-              {years.map((y) => (
-                <Link
-                  key={y}
-                  href={`/calendar?month=${y}-${pad(y === today.getUTCFullYear() ? today.getUTCMonth() + 1 : 1)}`}
-                  className={`px-2.5 py-1 text-xs tabular-nums transition-colors ${
-                    y === year
-                      ? "bg-ink text-paper"
-                      : "border-hair text-muted hover:border-ink border"
-                  }`}
-                >
-                  {y}
-                </Link>
-              ))}
-            </div>
           </div>
+        </div>
 
-          {/* Month strip for the selected year — the whole year's shape at a glance. */}
-          <div className="flex gap-1">
-            {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
-              const t = totalsByMonth.get(`${year}-${pad(m)}`);
-              const days = t?.days ?? 0;
-              const inMonth = new Date(Date.UTC(year, m, 0)).getUTCDate();
-              const ratio = days / inMonth;
-              return (
-                <Link
-                  key={m}
-                  href={`/calendar?month=${year}-${pad(m)}`}
-                  title={`${monthLabel(year, m)} — ${days} logged`}
-                  className="group flex flex-1 flex-col gap-1"
-                >
-                  <span
-                    className={`block h-1.5 ${m === month ? "ring-ink ring-1 ring-offset-1" : ""}`}
-                    style={{
-                      background:
-                        ratio === 0
-                          ? "var(--color-hair)"
-                          : `color-mix(in srgb, var(--color-sage) ${Math.round(25 + ratio * 75)}%, var(--color-tile))`,
-                    }}
-                  />
-                  <span
-                    className={`text-center text-[10px] tabular-nums ${m === month ? "text-ink" : "text-muted"}`}
-                  >
-                    {m}
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        </header>
+        <div className="flex flex-wrap items-baseline gap-4">
+          {years.map((y) => (
+            <Link
+              key={y}
+              href={`/calendar?month=${y}-${pad(y === today.getUTCFullYear() ? today.getUTCMonth() + 1 : 1)}`}
+              className={`microcap pb-0.5 text-[10px] tabular-nums ${
+                y === year
+                  ? "border-ink border-b font-bold"
+                  : "text-muted hover:text-ink"
+              }`}
+            >
+              {y}
+            </Link>
+          ))}
+        </div>
+
+        {/* Months as navigation, not as a heat map: a density ramp built from a
+            single ink value asks the eye to rank greys, which it is bad at. The
+            per-month count is in the title for anyone who wants the number. */}
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
+            const days = totalsByMonth.get(`${year}-${pad(m)}`)?.days ?? 0;
+            return (
+              <Link
+                key={m}
+                href={`/calendar?month=${year}-${pad(m)}`}
+                title={`${monthLabel(year, m)} — ${days} logged`}
+                className={`microcap pb-0.5 text-[10px] tabular-nums ${
+                  m === month
+                    ? "border-ink border-b font-bold"
+                    : days === 0
+                      ? "text-muted opacity-40"
+                      : "text-muted hover:text-ink"
+                }`}
+              >
+                {m}
+              </Link>
+            );
+          })}
+        </div>
 
         <div>
-          <div className="mb-1.5 grid grid-cols-7 gap-1.5">
+          <div className="mb-1 grid grid-cols-7 gap-1">
             {DOW.map((d) => (
-              <span key={d} className="eyebrow text-center">
+              <span
+                key={d}
+                className="microcap text-muted text-center text-[8px]"
+              >
                 {d.slice(0, 1)}
               </span>
             ))}
           </div>
 
-          <div className="grid grid-cols-7 gap-1.5">
+          <div className="grid grid-cols-7 gap-1">
             {Array.from({ length: leadingBlanks }, (_, i) => (
               <div key={`blank-${i}`} />
             ))}
@@ -172,37 +168,43 @@ export default async function CalendarPage({
               const count = entry?.count ?? 0;
               const future = date > todayIso;
               const isToday = date === todayIso;
+              const thumbs = entry?.entries.slice(0, MAX_THUMBS) ?? [];
 
               return (
                 <Link
                   key={date}
                   href={`/log?date=${date}`}
                   aria-label={`${date}, ${count} items logged`}
-                  className={`flex aspect-square flex-col border p-1.5 transition-colors ${
+                  title={
+                    count > 0
+                      ? entry!.entries.map((e) => e.name).join(" · ")
+                      : undefined
+                  }
+                  className={`flex aspect-square flex-col gap-1 border p-1 ${
                     future
                       ? "border-hair/60 pointer-events-none opacity-40"
                       : count > 0
-                        ? "border-hair hover:border-sage bg-card"
-                        : "border-cpw-bad/35 hover:border-cpw-bad border-dashed"
+                        ? "border-hair hover:border-ink"
+                        : "border-hair border-dashed hover:border-ink"
                   } ${isToday ? "ring-ink ring-1" : ""}`}
                 >
-                  <span
-                    className={`text-[11px] tabular-nums ${
-                      count === 0 && !future ? "text-cpw-bad" : "text-muted"
-                    }`}
-                  >
+                  <span className="microcap text-muted text-[8px] tabular-nums">
                     {day}
                   </span>
 
                   {count > 0 && (
-                    <span className="mt-auto flex flex-wrap gap-[3px]">
-                      {Array.from({ length: Math.min(count, 9) }, (_, i) => (
-                        <i
-                          key={i}
-                          className="bg-sage block size-[5px] opacity-80"
+                    <div className="mt-auto grid grid-cols-3 gap-[2px]">
+                      {thumbs.map((e) => (
+                        <ItemPhoto
+                          key={e.itemId}
+                          name={e.name}
+                          imagePath={e.imagePath}
+                          category={e.category}
+                          className="aspect-square"
+                          emojiClassName="text-[10px]"
                         />
                       ))}
-                    </span>
+                    </div>
                   )}
                 </Link>
               );
@@ -210,13 +212,11 @@ export default async function CalendarPage({
           </div>
         </div>
 
-        <div className="text-muted flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+        <div className="microcap text-muted flex flex-wrap items-center gap-x-5 gap-y-2 text-[9px]">
+          <span>One thumbnail per piece worn — the item&rsquo;s photo once it has one.</span>
           <span className="flex items-center gap-1.5">
-            <i className="bg-sage size-2" /> one dot per item worn
-          </span>
-          <span className="flex items-center gap-1.5">
-            <i className="border-cpw-bad/60 size-2.5 border border-dashed" />{" "}
-            nothing logged
+            <i className="border-hair size-2.5 border border-dashed" /> nothing
+            logged
           </span>
           <span>Tap any day to log it.</span>
         </div>
