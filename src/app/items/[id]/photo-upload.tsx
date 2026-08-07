@@ -71,7 +71,7 @@ export function PhotoUpload({
           type="button"
           disabled={busy}
           onClick={() => inputRef.current?.click()}
-          className="border-hair hover:border-ink rounded-full border px-4 py-1.5 text-xs transition-colors disabled:opacity-50"
+          className="border-hair hover:border-ink border px-4 py-1.5 text-xs transition-colors disabled:opacity-50"
         >
           {busy ? "Uploading…" : hasPhoto ? "Replace photo" : "Upload photo"}
         </button>
@@ -84,7 +84,7 @@ export function PhotoUpload({
                 await removePhoto(itemId);
               })
             }
-            className="text-muted hover:text-cpw-bad rounded-full px-3 py-1.5 text-xs transition-colors"
+            className="text-muted hover:text-cpw-bad px-3 py-1.5 text-xs transition-colors"
           >
             Remove
           </button>

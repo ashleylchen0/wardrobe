@@ -1,36 +1,40 @@
 @import "tailwindcss";
 
 /**
- * Editorial gallery, uniform grid. Near-monochrome cool paper so the clothes
- * carry the only real color; a single sage accent; cost-per-wear is the one
- * place the interface is allowed to use semantic color.
+ * "The Archive" — editorial white, ink, hairlines. Ported from ashley-outfits.
  *
- * Light only for now — dark mode is deliberately not built yet.
+ * The page is paper-white and the interface is drawn in ink and hairlines
+ * rather than in fills, so the clothes carry all the color. Cost per wear is
+ * the single exception: it is allowed a hue because it is a judgement, not
+ * decoration.
+ *
+ * Light only, deliberately.
  */
 @theme {
-  /* Neutrals, biased very slightly green so they sit with the sage accent
-     rather than reading as an unconsidered mid-grey. */
-  --color-paper: #f0f0ed;
+  /* Paper is now true white and cards sit on it without a fill — separation
+     comes from the hairline, not from a tint. `tile` is the photo well. */
+  --color-paper: #ffffff;
   --color-card: #ffffff;
-  --color-tile: #e6e6df;
-  --color-ink: #17181a;
-  --color-muted: #77786f;
-  --color-hair: #dcdcd4;
+  --color-tile: #f1efeb;
+  --color-ink: #161616;
+  --color-muted: #7a756d;
+  --color-hair: #eae8e4;
 
-  --color-sage: #4a6b5d;
-  --color-sage-soft: #e7ecea;
+  /* There is no accent color. Buttons, focus rings and active borders are all
+     `ink`; the tint behind a selection is `tile`. */
 
-  /* Cost-per-wear scale. Desaturated to editorial weight — these are the same
-     three semantic steps as a red/amber/green scale, dialed down to fit. */
+  /* Cost-per-wear scale. These three are the only chromatic values in the
+     interface, which is the point: color means a judgement about value. */
   --color-cpw-good: #4a6b5d;
   --color-cpw-ok: #8a6a2f;
   --color-cpw-bad: #9c4f3a;
 }
 
 @theme inline {
-  --font-serif: var(--font-newsreader), "Iowan Old Style", Georgia, serif;
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  /* The Archive is set in Helvetica throughout — no webfont, and no serif
+     voice, so there is no `--font-serif`: headings are caps, not italics. */
+  --font-sans: "Helvetica Neue", Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
 }
 
 @layer base {
@@ -38,6 +42,7 @@
     background: var(--color-paper);
     color: var(--color-ink);
     font-family: var(--font-sans);
+    font-size: 14px;
     -webkit-font-smoothing: antialiased;
   }
 
@@ -47,19 +52,42 @@
     text-wrap: balance;
   }
 
+  /* Nothing in the Archive is rounded. Utilities still win where a
+     `rounded-*` class is present, so this is the floor, not the enforcement. */
+  input,
+  select,
+  textarea,
+  button {
+    border-radius: 0;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 11px;
+    color: var(--color-muted);
+  }
+
   :focus-visible {
-    outline: 2px solid var(--color-sage);
+    outline: 2px solid var(--color-ink);
     outline-offset: 2px;
   }
 }
 
 @layer components {
-  /* Letterspaced caps carry every label and metadata run in this design. */
+  /* Letterspaced caps carry every label and metadata run in this design.
+     `.eyebrow` is the original name and stays as an alias so the existing
+     usages keep their styling; `.microcap` is the Archive's name for it. */
+  .microcap,
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
   .eyebrow {
     font-size: 0.6875rem;
     font-weight: 500;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
     color: var(--color-muted);
   }
 }

@@ -3,33 +3,69 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { CATEGORIES, type Category } from "@/lib/categories";
-import { createItem } from "@/app/items/new-item-actions";
+import { createItem, updateItem } from "@/app/items/item-actions";
 import { fetchProductImage } from "@/app/items/product-image";
 
+/** The fields this form can edit, as the detail page has them. */
+export type EditableItem = {
+  id: string;
+  name: string;
+  brand: string | null;
+  category: Category;
+  costCents: number | null;
+  acquiredOn: string | null;
+  acquiredPrecision: string | null;
+  tags: string[];
+  productUrl: string | null;
+  notes: string | null;
+};
+
 /**
- * The full add-item form. Only name and category are required — 60 of the
- * imported items have no cost and 29 no date, so demanding either would be the
- * wrong shape for how this wardrobe actually gets recorded.
+ * The full item form, used both to add and to edit. Only name and category are
+ * required — 60 of the imported items have no cost and 29 no date, so demanding
+ * either would be the wrong shape for how this wardrobe actually gets recorded.
+ *
+ * Passing `item` switches it to editing that item; `onSaved` lets the caller
+ * close the disclosure it sits in.
  */
-export function ItemForm({ brands }: { brands: string[] }) {
+export function ItemForm({
+  brands,
+  item,
+  onSaved,
+}: {
+  brands: string[];
+  item?: EditableItem;
+  onSaved?: () => void;
+}) {
+  const editing = item !== undefined;
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [pending, startTransition] = useTransition();
-  const [category, setCategory] = useState<Category>("tops");
+  const [category, setCategory] = useState<Category>(item?.category ?? "tops");
   const [error, setError] = useState<string | null>(null);
   const [suggestion, setSuggestion] = useState<string | null>(null);
-  const [productUrl, setProductUrl] = useState("");
+  const [productUrl, setProductUrl] = useState(item?.productUrl ?? "");
+  // Deliberately not persisted: once fetched, the picture lives in blob storage
+  // and the link it came from stops mattering.
+  const [imageLink, setImageLink] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageNote, setImageNote] = useState<string | null>(null);
+  const [direct, setDirect] = useState(false);
   const [fetching, setFetching] = useState(false);
 
-  async function grabImage() {
+  // A date input can only hold a full date, so a year-only acquisition shows as
+  // blank. The action preserves it unless a real date is chosen here.
+  const acquiredValue =
+    item?.acquiredPrecision === "day" ? (item.acquiredOn ?? "") : "";
+
+  async function grabImage(source: string) {
     setFetching(true);
     setImageNote(null);
     try {
-      const result = await fetchProductImage(productUrl);
+      const result = await fetchProductImage(source);
       if (result.ok) {
         setImageUrl(result.imageUrl);
+        setDirect(result.direct);
       } else {
         setImageUrl(null);
         setImageNote(result.error);
@@ -55,9 +91,18 @@ export function ItemForm({ brands }: { brands: string[] }) {
     if (imageUrl) formData.set("imageUrl", imageUrl);
 
     startTransition(async () => {
-      const result = await createItem(formData);
+      const result = item
+        ? await updateItem(item.id, formData)
+        : await createItem(formData);
+
       if (result.ok) {
-        router.push(`/items/${result.id}`);
+        if (item) {
+          setImageUrl(null);
+          router.refresh();
+          onSaved?.();
+        } else {
+          router.push(`/items/${result.id}`);
+        }
         return;
       }
       setError(result.error);
@@ -81,9 +126,10 @@ export function ItemForm({ brands }: { brands: string[] }) {
         <input
           name="name"
           required
-          autoFocus
+          autoFocus={!editing}
+          defaultValue={item?.name}
           maxLength={120}
-          className="border-hair focus:border-sage w-full rounded-lg border bg-card px-3 py-2 text-sm outline-none"
+          className="border-hair focus:border-ink w-full border bg-card px-3 py-2 text-sm outline-none"
         />
       </Field>
 
@@ -92,8 +138,9 @@ export function ItemForm({ brands }: { brands: string[] }) {
           <input
             name="brand"
             list="brand-options"
+            defaultValue={item?.brand ?? ""}
             maxLength={80}
-            className="border-hair focus:border-sage w-full rounded-lg border bg-card px-3 py-2 text-sm outline-none"
+            className="border-hair focus:border-ink w-full border bg-card px-3 py-2 text-sm outline-none"
           />
           <datalist id="brand-options">
             {brands.map((b) => (
@@ -103,12 +150,14 @@ export function ItemForm({ brands }: { brands: string[] }) {
         </Field>
 
         <Field label="Cost" hint="Leave blank if you don't know — that's not the same as free">
-          <div className="border-hair focus-within:border-sage flex items-center gap-1 rounded-lg border bg-card px-3 py-2">
+          <div className="border-hair focus-within:border-ink flex items-center gap-1 border bg-card px-3 py-2">
             <span className="text-muted text-sm">$</span>
             <input
               name="cost"
               inputMode="decimal"
-              placeholder=""
+              defaultValue={
+                item?.costCents != null ? (item.costCents / 100).toFixed(2) : ""
+              }
               className="w-full bg-transparent text-sm outline-none"
             />
           </div>
@@ -123,7 +172,7 @@ export function ItemForm({ brands }: { brands: string[] }) {
               type="button"
               onClick={() => setCategory(c)}
               aria-pressed={category === c}
-              className={`rounded-full px-3 py-1 text-xs capitalize transition-colors ${
+              className={`px-3 py-1 text-xs capitalize transition-colors ${
                 category === c
                   ? "bg-ink text-paper"
                   : "border-hair text-muted hover:border-ink border"
@@ -136,24 +185,40 @@ export function ItemForm({ brands }: { brands: string[] }) {
       </Field>
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Acquired" hint="Opens a calendar — leave blank if unknown">
+        <Field
+          label="Acquired"
+          hint={
+            editing && item?.acquiredPrecision === "year"
+              ? `Recorded as ${item.acquiredOn?.slice(0, 4)} — year only, which a date field can't show. Leave blank to keep it.`
+              : "Opens a calendar — leave blank if unknown"
+          }
+        >
           <input
             type="date"
             name="acquiredOn"
+            defaultValue={acquiredValue}
             max={new Date().toISOString().slice(0, 10)}
-            className="border-hair focus:border-sage w-full rounded-lg border bg-card px-3 py-2 text-sm tabular-nums outline-none"
+            className="border-hair focus:border-ink w-full border bg-card px-3 py-2 text-sm tabular-nums outline-none"
           />
         </Field>
 
         <Field label="Tags" hint="Comma separated, e.g. workout">
           <input
             name="tags"
-            className="border-hair focus:border-sage w-full rounded-lg border bg-card px-3 py-2 text-sm outline-none"
+            defaultValue={item?.tags.join(", ") ?? ""}
+            className="border-hair focus:border-ink w-full border bg-card px-3 py-2 text-sm outline-none"
           />
         </Field>
       </div>
 
-      <Field label="Product link" hint="Optional. Fetching copies the image into your own storage, so it survives the listing coming down.">
+      {/* Two boxes, because they answer different questions: the listing is
+          where to go and look at the thing, the image link is which picture you
+          actually want. A listing's own preview is often a model shot or a
+          collage, so being able to name the image directly matters. */}
+      <Field
+        label="Product link"
+        hint="Optional. Saved with the item so you can reopen the listing later."
+      >
         <div className="flex flex-wrap items-center gap-2">
           <input
             type="url"
@@ -161,31 +226,56 @@ export function ItemForm({ brands }: { brands: string[] }) {
             value={productUrl}
             onChange={(e) => setProductUrl(e.target.value)}
             placeholder="https://"
-            className="border-hair focus:border-sage min-w-56 flex-1 rounded-lg border bg-card px-3 py-2 text-sm outline-none"
+            className="border-hair focus:border-ink min-w-56 flex-1 border bg-card px-3 py-2 text-sm outline-none"
           />
           <button
             type="button"
-            onClick={grabImage}
+            onClick={() => grabImage(productUrl)}
             disabled={!productUrl.trim() || fetching}
-            className="border-hair hover:border-ink rounded-full border px-4 py-2 text-xs whitespace-nowrap transition-colors disabled:opacity-40"
+            className="border-hair hover:border-ink border px-4 py-2 text-xs whitespace-nowrap transition-colors disabled:opacity-40"
           >
-            {fetching ? "Fetching…" : "Fetch photo"}
+            {fetching ? "Fetching…" : "Use page's photo"}
+          </button>
+        </div>
+      </Field>
+
+      <Field
+        label="Image link"
+        hint="Optional. A link to the picture itself — right-click an image on the site and copy its address. Not stored; the file is copied into your own storage, so it survives the original coming down."
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="url"
+            value={imageLink}
+            onChange={(e) => setImageLink(e.target.value)}
+            placeholder="https://…/photo.jpg"
+            aria-label="Image link"
+            className="border-hair focus:border-ink min-w-56 flex-1 border bg-card px-3 py-2 text-sm outline-none"
+          />
+          <button
+            type="button"
+            onClick={() => grabImage(imageLink)}
+            disabled={!imageLink.trim() || fetching}
+            className="border-hair hover:border-ink border px-4 py-2 text-xs whitespace-nowrap transition-colors disabled:opacity-40"
+          >
+            {fetching ? "Fetching…" : "Use this image"}
           </button>
         </div>
       </Field>
 
       {imageUrl && (
-        <div className="border-hair flex items-center gap-4 rounded-xl border bg-card p-3">
+        <div className="border-hair flex items-center gap-4 border bg-card p-3">
           {/* eslint-disable-next-line @next/next/no-img-element -- remote preview, not yet stored */}
           <img
             src={imageUrl}
             alt="Preview from the product page"
-            className="bg-tile size-20 rounded-lg object-cover"
+            className="bg-tile size-20 object-cover"
           />
           <div className="flex flex-col gap-1 text-sm">
-            <span>Found a photo on that page.</span>
+            <span>{direct ? "Using that image." : "Found a photo on that page."}</span>
             <span className="text-muted text-xs">
-              It gets copied into your storage when you add the item.
+              It gets copied into your storage when you{" "}
+              {editing ? "save" : "add the item"}.
             </span>
           </div>
           <button
@@ -205,14 +295,15 @@ export function ItemForm({ brands }: { brands: string[] }) {
       <Field label="Notes">
         <textarea
           name="notes"
+          defaultValue={item?.notes ?? ""}
           rows={2}
           maxLength={500}
-          className="border-hair focus:border-sage w-full resize-y rounded-lg border bg-card px-3 py-2 text-sm outline-none"
+          className="border-hair focus:border-ink w-full resize-y border bg-card px-3 py-2 text-sm outline-none"
         />
       </Field>
 
       {error && (
-        <div className="border-cpw-bad/40 bg-cpw-bad/5 text-cpw-bad flex flex-wrap items-center gap-2 rounded-xl border px-4 py-3 text-sm">
+        <div className="border-cpw-bad/40 bg-cpw-bad/5 text-cpw-bad flex flex-wrap items-center gap-2 border px-4 py-3 text-sm">
           <span>{error}</span>
           {suggestion && (
             <button
@@ -230,12 +321,20 @@ export function ItemForm({ brands }: { brands: string[] }) {
         <button
           type="submit"
           disabled={pending}
-          className="bg-sage hover:bg-sage/90 rounded-full px-5 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50"
+          className="bg-ink hover:bg-ink/90 px-5 py-2 text-sm font-medium text-paper transition-colors disabled:opacity-50"
         >
-          {pending ? "Adding…" : "Add to closet"}
+          {pending
+            ? editing
+              ? "Saving…"
+              : "Adding…"
+            : editing
+              ? "Save changes"
+              : "Add to closet"}
         </button>
         <p className="text-muted text-xs">
-          You can add a photo on the next screen.
+          {editing
+            ? "Wear history and photo are unaffected."
+            : "You can add a photo on the next screen."}
         </p>
       </div>
     </form>

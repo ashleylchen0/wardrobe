@@ -1,15 +1,17 @@
 import { moneyFromNumeric } from "@/lib/format";
 
 /**
- * The one place this interface uses semantic color. Everything else is
- * near-monochrome so that a bad cost per wear reads as a signal rather than
- * as decoration.
+ * The one place this interface uses color. Everything else is monochrome, so a
+ * bad cost per wear reads as a signal rather than as decoration.
+ *
+ * There used to be a bar here. It was removed because the fill grew as the
+ * number got *worse*: the best items in the closet rendered as nearly empty
+ * tracks and the worst rendered as full ones, backwards from what a filled bar
+ * means everywhere else. The figure carries it on its own.
  *
  * `costPerWearCents` arrives as a numeric string from the `item_stats` view.
  */
 
-/** Bars top out at $20/wear. Past that the number carries it on its own. */
-const CAP_CENTS = 2000;
 const GOOD_BELOW = 500;
 const OK_BELOW = 1500;
 
@@ -21,27 +23,13 @@ function toneFor(cents: number): Tone {
   return "bad";
 }
 
-/**
- * Square-rooted so the low end stays legible — most of a wardrobe lives under
- * $6 a wear, and a linear scale crushes all of it against the left edge.
- */
-function fillWidth(cents: number): number {
-  return Math.max(0.02, Math.sqrt(Math.min(cents, CAP_CENTS) / CAP_CENTS));
-}
-
-const BAR: Record<Tone, string> = {
-  good: "var(--color-cpw-good)",
-  ok: "var(--color-cpw-ok)",
-  bad: "var(--color-cpw-bad)",
-};
-
 const TEXT: Record<Tone, string> = {
   good: "text-cpw-good",
   ok: "text-cpw-ok",
   bad: "text-cpw-bad",
 };
 
-export function CostPerWearBar({
+export function CostPerWear({
   costPerWearCents,
   timesWorn,
   costCents,
@@ -56,41 +44,28 @@ export function CostPerWearBar({
   // nobody has worn yet versus one whose price was never written down.
   if (costPerWearCents === null) {
     return (
-      <p className="text-muted text-xs">
+      <span className="microcap text-muted text-[10px]">
         {timesWorn === 0
           ? "Never worn"
           : costCents === null
             ? "No cost recorded"
             : "No cost per wear"}
-      </p>
+      </span>
     );
   }
 
-  const cents = Number(costPerWearCents);
-  const tone = toneFor(cents);
+  const tone = toneFor(Number(costPerWearCents));
 
+  // At display size the figure sits under its own "Cost per wear" label, so
+  // the /wear suffix would say it twice.
   return (
-    <div className="flex items-center gap-2.5">
-      <div
-        className={`bg-hair flex-1 overflow-hidden rounded-full ${
-          size === "lg" ? "h-1.5" : "h-1"
-        }`}
-      >
-        <div
-          className="h-full rounded-full"
-          style={{
-            width: `${fillWidth(cents) * 100}%`,
-            background: BAR[tone],
-          }}
-        />
-      </div>
-      <span
-        className={`shrink-0 tabular-nums ${TEXT[tone]} ${
-          size === "lg" ? "text-base font-medium" : "text-xs"
-        }`}
-      >
-        {moneyFromNumeric(costPerWearCents)}
-      </span>
-    </div>
+    <span
+      className={`tabular-nums ${TEXT[tone]} ${
+        size === "lg" ? "text-4xl" : "text-[11px]"
+      }`}
+    >
+      {moneyFromNumeric(costPerWearCents)}
+      {size === "sm" && "/wear"}
+    </span>
   );
 }

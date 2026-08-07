@@ -3,8 +3,17 @@
 import { getSession } from "@/lib/auth";
 
 export type ProductImageResult =
-  | { ok: true; imageUrl: string }
+  | { ok: true; imageUrl: string; direct: boolean }
   | { ok: false; error: string };
+
+/**
+ * A link straight to the image file, rather than to a page containing one.
+ * Checked by extension first so the obvious case costs no round trip; a URL
+ * that ends in `.jpg` is not a product page under any reading.
+ */
+function looksLikeImageUrl(url: URL): boolean {
+  return /\.(jpe?g|png|webp|avif|gif)$/i.test(url.pathname);
+}
 
 /**
  * Blocks the obvious SSRF targets. This app has one user, but the server will
@@ -58,6 +67,11 @@ export async function fetchProductImage(raw: string): Promise<ProductImageResult
     return { ok: false, error: "That link can't be fetched." };
   }
 
+  // Paste the image itself and there is nothing to scrape.
+  if (looksLikeImageUrl(url)) {
+    return { ok: true, imageUrl: url.toString(), direct: true };
+  }
+
   let html: string;
   try {
     const response = await fetch(url, {
@@ -67,7 +81,7 @@ export async function fetchProductImage(raw: string): Promise<ProductImageResult
         // Sites serve a bare shell to obvious bots; ask like a browser.
         "User-Agent":
           "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36",
-        Accept: "text/html,application/xhtml+xml",
+        Accept: "text/html,application/xhtml+xml,image/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9",
       },
     });
@@ -77,6 +91,13 @@ export async function fetchProductImage(raw: string): Promise<ProductImageResult
         error: `The site refused the request (${response.status}). Upload a photo instead.`,
       };
     }
+
+    // Extensionless image links are common on CDNs, where the path is a hash
+    // and the format lives in a query string. Trust what came back, not the URL.
+    if ((response.headers.get("content-type") ?? "").startsWith("image/")) {
+      return { ok: true, imageUrl: response.url || url.toString(), direct: true };
+    }
+
     // Only the head matters, and product pages can be enormous.
     html = (await response.text()).slice(0, 300_000);
   } catch {
@@ -106,5 +127,5 @@ export async function fetchProductImage(raw: string): Promise<ProductImageResult
     return { ok: false, error: "That page's image can't be fetched." };
   }
 
-  return { ok: true, imageUrl: imageUrl.toString() };
+  return { ok: true, imageUrl: imageUrl.toString(), direct: false };
 }

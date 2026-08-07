@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { items, itemStats, wears } from "@/db/schema";
 import type { Category } from "@/lib/categories";
@@ -7,18 +7,10 @@ import type { Category } from "@/lib/categories";
 // "@/lib/categories" directly — this module opens a database connection.
 export { CATEGORIES, isCategory, type Category } from "@/lib/categories";
 
-export const SORTS = {
-  cpw: "Cost per wear",
-  worn: "Times worn",
-  cost: "Cost",
-  brand: "Brand",
-  name: "Name",
-} as const;
-export type Sort = keyof typeof SORTS;
-
-export function isSort(v: string | undefined): v is Sort {
-  return !!v && v in SORTS;
-}
+// Re-exported for server callers; the definitions live in a driver-free module
+// so the toolbar can import them too.
+import type { Sort } from "@/lib/sorts";
+export { SORTS, DEFAULT_SORT, isSort, type Sort } from "@/lib/sorts";
 
 export const STATUSES = ["active", "archived"] as const;
 export type Status = (typeof STATUSES)[number];
@@ -31,17 +23,25 @@ export async function getClosetItems({
   category: cat,
   sort = "worn",
   status = "active",
+  q,
 }: {
   category?: Category;
   sort?: Sort;
   status?: Status;
+  q?: string;
 }) {
   // Items with no cost, or never worn, have no cost per wear — they sort last
   // rather than masquerading as $0.00.
   const orderBy = {
     cpw: [sql`${itemStats.costPerWearCents} ASC NULLS LAST`],
+    "cpw-desc": [sql`${itemStats.costPerWearCents} DESC NULLS LAST`],
     worn: [desc(itemStats.timesWorn), asc(items.name)],
+    "worn-asc": [asc(itemStats.timesWorn), asc(items.name)],
+    // Never-worn items have no last wear date; they belong at the end rather
+    // than at the top of a list about recency.
+    recent: [sql`${itemStats.lastWorn} DESC NULLS LAST`, asc(items.name)],
     cost: [sql`${items.costCents} DESC NULLS LAST`],
+    newest: [sql`${items.acquiredOn} DESC NULLS LAST`, asc(items.name)],
     brand: [sql`${items.brand} ASC NULLS LAST`, asc(items.name)],
     name: [asc(items.name)],
   }[sort];
@@ -66,7 +66,18 @@ export async function getClosetItems({
     .innerJoin(itemStats, eq(itemStats.itemId, items.id))
     .$dynamic();
 
-  query.where(cat ? and(eq(items.status, status), eq(items.category, cat)) : eq(items.status, status));
+  // Search covers name and brand, which is what you actually remember about a
+  // garment. `%` and `_` are escaped so a literal one doesn't become a wildcard.
+  const term = q?.trim();
+  const like = term ? `%${term.replace(/[\\%_]/g, (c) => `\\${c}`)}%` : null;
+
+  query.where(
+    and(
+      eq(items.status, status),
+      cat ? eq(items.category, cat) : undefined,
+      like ? or(ilike(items.name, like), ilike(items.brand, like)) : undefined,
+    ),
+  );
 
   return query.orderBy(...orderBy);
 }
@@ -163,6 +174,36 @@ export async function getRecentLoggedDates(limit = 7) {
 }
 
 /**
+ * Recent logged days with the pieces worn on each, for the sidebar. One query
+ * rather than one per day: the list is short, but N+1 over a wear log is the
+ * kind of thing that only hurts once the log is long.
+ */
+export async function getRecentDays(limit = 7) {
+  const rows = await db
+    .select({
+      wornOn: wears.wornOn,
+      itemId: items.id,
+      name: items.name,
+    })
+    .from(wears)
+    .innerJoin(items, eq(items.id, wears.itemId))
+    .where(
+      sql`${wears.wornOn} in (
+        select distinct worn_on from ${wears} order by worn_on desc limit ${limit}
+      )`,
+    )
+    .orderBy(desc(wears.wornOn), asc(items.name));
+
+  const days = new Map<string, { itemId: string; name: string }[]>();
+  for (const r of rows) {
+    const entries = days.get(r.wornOn) ?? [];
+    entries.push({ itemId: r.itemId, name: r.name });
+    days.set(r.wornOn, entries);
+  }
+  return [...days.entries()].map(([date, entries]) => ({ date, entries }));
+}
+
+/**
  * Wear counts per day across a month, plus the categories worn, so a cell can
  * show what kind of day it was without loading every item.
  */
@@ -170,16 +211,29 @@ export async function getMonthCoverage(from: string, to: string) {
   const rows = await db
     .select({
       wornOn: wears.wornOn,
-      count: sql<number>`count(*)::int`,
-      categories: sql<string[]>`array_agg(distinct ${items.category}::text)`,
+      itemId: items.id,
+      name: items.name,
+      category: items.category,
+      imagePath: items.imagePath,
     })
     .from(wears)
     .innerJoin(items, eq(items.id, wears.itemId))
     .where(sql`${wears.wornOn} >= ${from} and ${wears.wornOn} <= ${to}`)
-    .groupBy(wears.wornOn);
+    .orderBy(asc(wears.wornOn), asc(items.name));
 
-  return new Map(rows.map((r) => [r.wornOn, r]));
+  const days = new Map<string, { count: number; entries: typeof rows }>();
+  for (const r of rows) {
+    const day = days.get(r.wornOn) ?? { count: 0, entries: [] };
+    day.count += 1;
+    day.entries.push(r);
+    days.set(r.wornOn, day);
+  }
+  return days;
 }
+
+export type MonthDay = NonNullable<
+  Awaited<ReturnType<typeof getMonthCoverage>> extends Map<string, infer V> ? V : never
+>;
 
 /** Logged-day totals per month, for the year strip and the header stats. */
 export async function getMonthlyTotals(year: number) {
@@ -205,5 +259,57 @@ export async function getLoggedYears() {
   return rows.map((r) => r.year);
 }
 
+/**
+ * The stats page counts only the closet as it stands today.
+ *
+ * Every query below is scoped to `status = 'active'`, archived pieces and their
+ * wear history included — the page is meant to answer "what am I getting out of
+ * what I own", and a donated coat's 60 wears flatter an average that no longer
+ * describes anything. The wear rows stay in the database either way; they are
+ * still counted on the item's own page and in the calendar.
+ */
+export async function getStatsItems() {
+  return db
+    .select({
+      id: items.id,
+      name: items.name,
+      category: items.category,
+      status: items.status,
+      costCents: items.costCents,
+      timesWorn: itemStats.timesWorn,
+      costPerWearCents: itemStats.costPerWearCents,
+    })
+    .from(items)
+    .innerJoin(itemStats, eq(itemStats.itemId, items.id))
+    .where(eq(items.status, "active"));
+}
+
+/** Wears, and days on which something still in the closet was worn. */
+export async function getWearTotals() {
+  const [row] = await db
+    .select({
+      totalWears: sql<number>`count(*)::int`,
+      totalDays: sql<number>`count(distinct ${wears.wornOn})::int`,
+    })
+    .from(wears)
+    .innerJoin(items, eq(items.id, wears.itemId))
+    .where(eq(items.status, "active"));
+  return row ?? { totalWears: 0, totalDays: 0 };
+}
+
+export async function getWearsByYear() {
+  return db
+    .select({
+      year: sql<number>`extract(year from ${wears.wornOn})::int`,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(wears)
+    .innerJoin(items, eq(items.id, wears.itemId))
+    .where(eq(items.status, "active"))
+    .groupBy(sql`extract(year from ${wears.wornOn})`)
+    .orderBy(sql`extract(year from ${wears.wornOn})`);
+}
+
 export type PickableItem = Awaited<ReturnType<typeof getPickableItems>>[number];
 export type ClosetItem = Awaited<ReturnType<typeof getClosetItems>>[number];
+export type StatsItem = Awaited<ReturnType<typeof getStatsItems>>[number];

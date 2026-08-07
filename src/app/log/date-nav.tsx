@@ -14,12 +14,12 @@ export function DateNav({ date, today }: { date: string; today: string }) {
   const go = (next: string) => router.push(`/log?date=${next}`);
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-3">
       <button
         type="button"
         onClick={() => go(shift(date, -1))}
         aria-label="Previous day"
-        className="border-hair hover:border-ink rounded-full border px-3 py-1.5 text-sm transition-colors"
+        className="microcap text-muted hover:text-ink cursor-pointer text-[11px]"
       >
         ←
       </button>
@@ -30,7 +30,7 @@ export function DateNav({ date, today }: { date: string; today: string }) {
         max={today}
         onChange={(e) => e.target.value && go(e.target.value)}
         aria-label="Date"
-        className="border-hair focus:border-sage rounded-lg border bg-card px-3 py-1.5 text-sm tabular-nums outline-none"
+        className="border-ink border bg-transparent px-2 py-1.5 text-[13px] tabular-nums outline-none"
       />
 
       <button
@@ -38,7 +38,7 @@ export function DateNav({ date, today }: { date: string; today: string }) {
         onClick={() => go(shift(date, 1))}
         disabled={date >= today}
         aria-label="Next day"
-        className="border-hair hover:border-ink rounded-full border px-3 py-1.5 text-sm transition-colors disabled:opacity-35"
+        className="microcap text-muted hover:text-ink cursor-pointer text-[11px] disabled:opacity-30"
       >
         →
       </button>
@@ -47,7 +47,7 @@ export function DateNav({ date, today }: { date: string; today: string }) {
         <button
           type="button"
           onClick={() => go(today)}
-          className="text-sage text-sm underline underline-offset-4"
+          className="microcap cursor-pointer text-[10px] underline underline-offset-4"
         >
           Today
         </button>

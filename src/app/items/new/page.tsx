@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ItemForm } from "@/components/item-form";
-import { getBrands } from "../new-item-actions";
+import { getBrands } from "../item-actions";
 
 export const metadata = { title: "Add an item · Wardrobe" };
 
@@ -14,7 +14,7 @@ export default async function NewItemPage() {
           <Link href="/" className="eyebrow hover:text-ink transition-colors">
             ← Closet
           </Link>
-          <h1 className="font-serif text-3xl tracking-tight">Add an item</h1>
+          <h1 className="microcap text-[14px] font-bold">Add an item</h1>
           <p className="text-muted max-w-prose text-sm">
             Only the name and category are required. Everything else can wait —
             adding it now beats not adding it at all.
