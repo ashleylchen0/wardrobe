@@ -20,26 +20,20 @@
   --color-muted: #7a756d;
   --color-hair: #eae8e4;
 
-  /* The sage accent is retired: the Archive has no accent hue, it has ink.
-     Both tokens stay mapped so existing `*-sage` classes keep working until
-     the component pass renames them. */
-  --color-sage: #161616;
-  --color-sage-soft: #f1efeb;
+  /* There is no accent color. Buttons, focus rings and active borders are all
+     `ink`; the tint behind a selection is `tile`. */
 
-  /* Cost-per-wear scale, unchanged. Now that sage is gone these three are the
-     only chromatic values left in the interface, which is the point. */
+  /* Cost-per-wear scale. These three are the only chromatic values in the
+     interface, which is the point: color means a judgement about value. */
   --color-cpw-good: #4a6b5d;
   --color-cpw-ok: #8a6a2f;
   --color-cpw-bad: #9c4f3a;
 }
 
 @theme inline {
-  /* The Archive is set in Helvetica throughout — no webfont, no serif voice.
-     `--font-serif` is aimed at the same stack so existing `font-serif` usages
-     degrade to Helvetica instead of falling back to Georgia mid-port; the
-     component pass replaces those usages with caps treatment. */
+  /* The Archive is set in Helvetica throughout — no webfont, and no serif
+     voice, so there is no `--font-serif`: headings are caps, not italics. */
   --font-sans: "Helvetica Neue", Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Helvetica Neue", Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
 }
 

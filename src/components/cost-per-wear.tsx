@@ -56,14 +56,16 @@ export function CostPerWear({
 
   const tone = toneFor(Number(costPerWearCents));
 
+  // At display size the figure sits under its own "Cost per wear" label, so
+  // the /wear suffix would say it twice.
   return (
     <span
       className={`tabular-nums ${TEXT[tone]} ${
-        size === "lg" ? "text-2xl" : "text-[11px]"
+        size === "lg" ? "text-4xl" : "text-[11px]"
       }`}
     >
       {moneyFromNumeric(costPerWearCents)}
-      <span className={size === "lg" ? "text-base" : ""}>/wear</span>
+      {size === "sm" && "/wear"}
     </span>
   );
 }

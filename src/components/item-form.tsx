@@ -83,7 +83,7 @@ export function ItemForm({ brands }: { brands: string[] }) {
           required
           autoFocus
           maxLength={120}
-          className="border-hair focus:border-sage w-full border bg-card px-3 py-2 text-sm outline-none"
+          className="border-hair focus:border-ink w-full border bg-card px-3 py-2 text-sm outline-none"
         />
       </Field>
 
@@ -93,7 +93,7 @@ export function ItemForm({ brands }: { brands: string[] }) {
             name="brand"
             list="brand-options"
             maxLength={80}
-            className="border-hair focus:border-sage w-full border bg-card px-3 py-2 text-sm outline-none"
+            className="border-hair focus:border-ink w-full border bg-card px-3 py-2 text-sm outline-none"
           />
           <datalist id="brand-options">
             {brands.map((b) => (
@@ -103,7 +103,7 @@ export function ItemForm({ brands }: { brands: string[] }) {
         </Field>
 
         <Field label="Cost" hint="Leave blank if you don't know — that's not the same as free">
-          <div className="border-hair focus-within:border-sage flex items-center gap-1 border bg-card px-3 py-2">
+          <div className="border-hair focus-within:border-ink flex items-center gap-1 border bg-card px-3 py-2">
             <span className="text-muted text-sm">$</span>
             <input
               name="cost"
@@ -141,14 +141,14 @@ export function ItemForm({ brands }: { brands: string[] }) {
             type="date"
             name="acquiredOn"
             max={new Date().toISOString().slice(0, 10)}
-            className="border-hair focus:border-sage w-full border bg-card px-3 py-2 text-sm tabular-nums outline-none"
+            className="border-hair focus:border-ink w-full border bg-card px-3 py-2 text-sm tabular-nums outline-none"
           />
         </Field>
 
         <Field label="Tags" hint="Comma separated, e.g. workout">
           <input
             name="tags"
-            className="border-hair focus:border-sage w-full border bg-card px-3 py-2 text-sm outline-none"
+            className="border-hair focus:border-ink w-full border bg-card px-3 py-2 text-sm outline-none"
           />
         </Field>
       </div>
@@ -161,7 +161,7 @@ export function ItemForm({ brands }: { brands: string[] }) {
             value={productUrl}
             onChange={(e) => setProductUrl(e.target.value)}
             placeholder="https://"
-            className="border-hair focus:border-sage min-w-56 flex-1 border bg-card px-3 py-2 text-sm outline-none"
+            className="border-hair focus:border-ink min-w-56 flex-1 border bg-card px-3 py-2 text-sm outline-none"
           />
           <button
             type="button"
@@ -207,7 +207,7 @@ export function ItemForm({ brands }: { brands: string[] }) {
           name="notes"
           rows={2}
           maxLength={500}
-          className="border-hair focus:border-sage w-full resize-y border bg-card px-3 py-2 text-sm outline-none"
+          className="border-hair focus:border-ink w-full resize-y border bg-card px-3 py-2 text-sm outline-none"
         />
       </Field>
 
@@ -230,7 +230,7 @@ export function ItemForm({ brands }: { brands: string[] }) {
         <button
           type="submit"
           disabled={pending}
-          className="bg-sage hover:bg-sage/90 px-5 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50"
+          className="bg-ink hover:bg-ink/90 px-5 py-2 text-sm font-medium text-paper transition-colors disabled:opacity-50"
         >
           {pending ? "Adding…" : "Add to closet"}
         </button>

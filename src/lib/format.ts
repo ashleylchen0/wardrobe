@@ -20,6 +20,17 @@ export function categoryEmoji(category: Category): string {
   return CATEGORY_EMOJI[category] ?? "👕";
 }
 
+/** "Jul 7, 2026". Parsed as UTC so a local timezone can't shift the day. */
+export function fmtDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 /** Grouped, so four-figure totals on the stats page don't read as one long run. */
 function dollars(cents: number): string {
   return `$${(cents / 100).toLocaleString("en-US", {
