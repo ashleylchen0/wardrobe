@@ -47,6 +47,7 @@ export function ItemForm({
   const [productUrl, setProductUrl] = useState(item?.productUrl ?? "");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageNote, setImageNote] = useState<string | null>(null);
+  const [direct, setDirect] = useState(false);
   const [fetching, setFetching] = useState(false);
 
   // A date input can only hold a full date, so a year-only acquisition shows as
@@ -61,6 +62,7 @@ export function ItemForm({
       const result = await fetchProductImage(productUrl);
       if (result.ok) {
         setImageUrl(result.imageUrl);
+        setDirect(result.direct);
       } else {
         setImageUrl(null);
         setImageNote(result.error);
@@ -206,7 +208,10 @@ export function ItemForm({
         </Field>
       </div>
 
-      <Field label="Product link" hint="Optional. Fetching copies the image into your own storage, so it survives the listing coming down.">
+      <Field
+        label="Product link or image link"
+        hint="Optional. Paste a listing and it reads that page's preview image, or paste an image link (ending .jpg, .png, .webp) to use it directly. Either way the file is copied into your own storage, so it survives the original coming down."
+      >
         <div className="flex flex-wrap items-center gap-2">
           <input
             type="url"
@@ -236,7 +241,7 @@ export function ItemForm({
             className="bg-tile size-20 object-cover"
           />
           <div className="flex flex-col gap-1 text-sm">
-            <span>Found a photo on that page.</span>
+            <span>{direct ? "Using that image." : "Found a photo on that page."}</span>
             <span className="text-muted text-xs">
               It gets copied into your storage when you{" "}
               {editing ? "save" : "add the item"}.
