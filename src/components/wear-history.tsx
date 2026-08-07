@@ -30,7 +30,7 @@ export function WearHistory({ dates }: { dates: string[] }) {
               {days.map((day) => (
                 <span
                   key={day}
-                  className="bg-tile text-muted rounded px-1.5 py-0.5 text-xs tabular-nums"
+                  className="bg-tile text-muted px-1.5 py-0.5 text-xs tabular-nums"
                 >
                   {day.slice(5)}
                 </span>

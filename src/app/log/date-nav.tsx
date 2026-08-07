@@ -19,7 +19,7 @@ export function DateNav({ date, today }: { date: string; today: string }) {
         type="button"
         onClick={() => go(shift(date, -1))}
         aria-label="Previous day"
-        className="border-hair hover:border-ink rounded-full border px-3 py-1.5 text-sm transition-colors"
+        className="border-hair hover:border-ink border px-3 py-1.5 text-sm transition-colors"
       >
         ←
       </button>
@@ -30,7 +30,7 @@ export function DateNav({ date, today }: { date: string; today: string }) {
         max={today}
         onChange={(e) => e.target.value && go(e.target.value)}
         aria-label="Date"
-        className="border-hair focus:border-sage rounded-lg border bg-card px-3 py-1.5 text-sm tabular-nums outline-none"
+        className="border-hair focus:border-sage border bg-card px-3 py-1.5 text-sm tabular-nums outline-none"
       />
 
       <button
@@ -38,7 +38,7 @@ export function DateNav({ date, today }: { date: string; today: string }) {
         onClick={() => go(shift(date, 1))}
         disabled={date >= today}
         aria-label="Next day"
-        className="border-hair hover:border-ink rounded-full border px-3 py-1.5 text-sm transition-colors disabled:opacity-35"
+        className="border-hair hover:border-ink border px-3 py-1.5 text-sm transition-colors disabled:opacity-35"
       >
         →
       </button>

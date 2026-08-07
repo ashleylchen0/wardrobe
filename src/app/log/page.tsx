@@ -65,7 +65,7 @@ export default async function LogPage({
                 <li key={r.wornOn}>
                   <Link
                     href={`/log?date=${r.wornOn}`}
-                    className={`border-hair hover:border-ink rounded-full border px-3 py-1 text-xs tabular-nums transition-colors ${
+                    className={`border-hair hover:border-ink border px-3 py-1 text-xs tabular-nums transition-colors ${
                       r.wornOn === date ? "bg-ink text-paper border-ink" : ""
                     }`}
                   >

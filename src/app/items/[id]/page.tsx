@@ -39,7 +39,7 @@ export default async function ItemPage({
             name={item.name}
             imagePath={item.imagePath}
             category={item.category}
-            className={`aspect-[4/5] rounded-2xl ${
+            className={`aspect-[4/5] ${
               archived ? "opacity-55 grayscale" : ""
             }`}
             garmentClassName="h-[72%] w-[62%]"
@@ -63,7 +63,7 @@ export default async function ItemPage({
                   {item.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="border-hair text-muted rounded-full border px-2.5 py-0.5 text-xs"
+                      className="border-hair text-muted border px-2.5 py-0.5 text-xs"
                     >
                       {tag}
                     </span>
@@ -75,7 +75,7 @@ export default async function ItemPage({
           </div>
 
           {archived && (
-            <p className="bg-tile text-muted rounded-xl px-4 py-3 text-sm">
+            <p className="bg-tile text-muted px-4 py-3 text-sm">
               No longer in your closet
               {item.archivedOn && <> — archived {item.archivedOn}</>}. Its wear
               history still counts toward cost per wear.
@@ -83,7 +83,7 @@ export default async function ItemPage({
           )}
 
           {item.needsReview && (
-            <div className="border-cpw-bad/30 bg-cpw-bad/5 text-cpw-bad rounded-xl border px-4 py-3 text-sm">
+            <div className="border-cpw-bad/30 bg-cpw-bad/5 text-cpw-bad border px-4 py-3 text-sm">
               Imported with missing or conflicting data.
               {item.importConflicts != null && (
                 <pre className="text-ink/70 mt-2 overflow-x-auto text-xs">
@@ -95,7 +95,7 @@ export default async function ItemPage({
 
           {/* Cost per wear is the number this whole app exists to produce, so it
               gets its own block rather than a slot in the stat row. */}
-          <div className="border-hair flex flex-col gap-2.5 rounded-2xl border bg-card px-5 py-4">
+          <div className="border-hair flex flex-col gap-2.5 border bg-card px-5 py-4">
             <p className="eyebrow">Cost per wear</p>
             <CostPerWearBar
               costPerWearCents={costPerWearCents}
@@ -118,7 +118,7 @@ export default async function ItemPage({
           )}
 
           {item.notes && (
-            <p className="bg-tile rounded-xl px-4 py-3 text-sm">{item.notes}</p>
+            <p className="bg-tile px-4 py-3 text-sm">{item.notes}</p>
           )}
 
           {item.productUrl && (
@@ -152,7 +152,7 @@ function ArchiveButton({ id, archived }: { id: string; archived: boolean }) {
     <form action={toggle}>
       <button
         type="submit"
-        className="border-hair hover:border-ink rounded-full border px-4 py-1.5 text-xs transition-colors"
+        className="border-hair hover:border-ink border px-4 py-1.5 text-xs transition-colors"
       >
         {archived ? "Move back to closet" : "Archive"}
       </button>

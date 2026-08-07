@@ -13,7 +13,7 @@ export function ItemCard({ item }: { item: ClosetItem }) {
     <li className="flex">
       <Link
         href={`/items/${item.id}`}
-        className="border-hair hover:border-sage/40 group flex w-full flex-col rounded-2xl border bg-card p-3 transition-[border-color,box-shadow] hover:shadow-[0_10px_30px_-18px_rgba(23,24,26,0.35)]"
+        className="border-hair hover:border-sage/40 group flex w-full flex-col border bg-card p-3 transition-[border-color,box-shadow] hover:shadow-[0_10px_30px_-18px_rgba(23,24,26,0.35)]"
       >
         <div className="relative">
           {/* Uniform tile — the grid keeps one rhythm whatever the garment is. */}
@@ -21,13 +21,13 @@ export function ItemCard({ item }: { item: ClosetItem }) {
             name={item.name}
             imagePath={item.imagePath}
             category={item.category}
-            className={`aspect-[4/5] rounded-xl ${
+            className={`aspect-[4/5] ${
               archived ? "opacity-55 grayscale" : ""
             }`}
           />
           {item.needsReview && (
             <span
-              className="eyebrow text-cpw-bad absolute top-2.5 right-2.5 rounded-full bg-card/85 px-2 py-0.5"
+              className="eyebrow text-cpw-bad absolute top-2.5 right-2.5 bg-card/85 px-2 py-0.5"
               title="Imported with conflicting or missing data"
             >
               Review

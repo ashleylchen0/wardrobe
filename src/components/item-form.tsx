@@ -83,7 +83,7 @@ export function ItemForm({ brands }: { brands: string[] }) {
           required
           autoFocus
           maxLength={120}
-          className="border-hair focus:border-sage w-full rounded-lg border bg-card px-3 py-2 text-sm outline-none"
+          className="border-hair focus:border-sage w-full border bg-card px-3 py-2 text-sm outline-none"
         />
       </Field>
 
@@ -93,7 +93,7 @@ export function ItemForm({ brands }: { brands: string[] }) {
             name="brand"
             list="brand-options"
             maxLength={80}
-            className="border-hair focus:border-sage w-full rounded-lg border bg-card px-3 py-2 text-sm outline-none"
+            className="border-hair focus:border-sage w-full border bg-card px-3 py-2 text-sm outline-none"
           />
           <datalist id="brand-options">
             {brands.map((b) => (
@@ -103,7 +103,7 @@ export function ItemForm({ brands }: { brands: string[] }) {
         </Field>
 
         <Field label="Cost" hint="Leave blank if you don't know — that's not the same as free">
-          <div className="border-hair focus-within:border-sage flex items-center gap-1 rounded-lg border bg-card px-3 py-2">
+          <div className="border-hair focus-within:border-sage flex items-center gap-1 border bg-card px-3 py-2">
             <span className="text-muted text-sm">$</span>
             <input
               name="cost"
@@ -123,7 +123,7 @@ export function ItemForm({ brands }: { brands: string[] }) {
               type="button"
               onClick={() => setCategory(c)}
               aria-pressed={category === c}
-              className={`rounded-full px-3 py-1 text-xs capitalize transition-colors ${
+              className={`px-3 py-1 text-xs capitalize transition-colors ${
                 category === c
                   ? "bg-ink text-paper"
                   : "border-hair text-muted hover:border-ink border"
@@ -141,14 +141,14 @@ export function ItemForm({ brands }: { brands: string[] }) {
             type="date"
             name="acquiredOn"
             max={new Date().toISOString().slice(0, 10)}
-            className="border-hair focus:border-sage w-full rounded-lg border bg-card px-3 py-2 text-sm tabular-nums outline-none"
+            className="border-hair focus:border-sage w-full border bg-card px-3 py-2 text-sm tabular-nums outline-none"
           />
         </Field>
 
         <Field label="Tags" hint="Comma separated, e.g. workout">
           <input
             name="tags"
-            className="border-hair focus:border-sage w-full rounded-lg border bg-card px-3 py-2 text-sm outline-none"
+            className="border-hair focus:border-sage w-full border bg-card px-3 py-2 text-sm outline-none"
           />
         </Field>
       </div>
@@ -161,13 +161,13 @@ export function ItemForm({ brands }: { brands: string[] }) {
             value={productUrl}
             onChange={(e) => setProductUrl(e.target.value)}
             placeholder="https://"
-            className="border-hair focus:border-sage min-w-56 flex-1 rounded-lg border bg-card px-3 py-2 text-sm outline-none"
+            className="border-hair focus:border-sage min-w-56 flex-1 border bg-card px-3 py-2 text-sm outline-none"
           />
           <button
             type="button"
             onClick={grabImage}
             disabled={!productUrl.trim() || fetching}
-            className="border-hair hover:border-ink rounded-full border px-4 py-2 text-xs whitespace-nowrap transition-colors disabled:opacity-40"
+            className="border-hair hover:border-ink border px-4 py-2 text-xs whitespace-nowrap transition-colors disabled:opacity-40"
           >
             {fetching ? "Fetching…" : "Fetch photo"}
           </button>
@@ -175,12 +175,12 @@ export function ItemForm({ brands }: { brands: string[] }) {
       </Field>
 
       {imageUrl && (
-        <div className="border-hair flex items-center gap-4 rounded-xl border bg-card p-3">
+        <div className="border-hair flex items-center gap-4 border bg-card p-3">
           {/* eslint-disable-next-line @next/next/no-img-element -- remote preview, not yet stored */}
           <img
             src={imageUrl}
             alt="Preview from the product page"
-            className="bg-tile size-20 rounded-lg object-cover"
+            className="bg-tile size-20 object-cover"
           />
           <div className="flex flex-col gap-1 text-sm">
             <span>Found a photo on that page.</span>
@@ -207,12 +207,12 @@ export function ItemForm({ brands }: { brands: string[] }) {
           name="notes"
           rows={2}
           maxLength={500}
-          className="border-hair focus:border-sage w-full resize-y rounded-lg border bg-card px-3 py-2 text-sm outline-none"
+          className="border-hair focus:border-sage w-full resize-y border bg-card px-3 py-2 text-sm outline-none"
         />
       </Field>
 
       {error && (
-        <div className="border-cpw-bad/40 bg-cpw-bad/5 text-cpw-bad flex flex-wrap items-center gap-2 rounded-xl border px-4 py-3 text-sm">
+        <div className="border-cpw-bad/40 bg-cpw-bad/5 text-cpw-bad flex flex-wrap items-center gap-2 border px-4 py-3 text-sm">
           <span>{error}</span>
           {suggestion && (
             <button
@@ -230,7 +230,7 @@ export function ItemForm({ brands }: { brands: string[] }) {
         <button
           type="submit"
           disabled={pending}
-          className="bg-sage hover:bg-sage/90 rounded-full px-5 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50"
+          className="bg-sage hover:bg-sage/90 px-5 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50"
         >
           {pending ? "Adding…" : "Add to closet"}
         </button>

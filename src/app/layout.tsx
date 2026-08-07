@@ -1,27 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Geist, Geist_Mono, Newsreader } from "next/font/google";
 import "./globals.css";
 import { getSession } from "@/lib/auth";
 import { NavLink } from "@/components/nav-link";
 import { SignOutButton } from "./sign-out";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-/** Editorial serif for garment names and headings; Geist carries the data. */
-const newsreader = Newsreader({
-  variable: "--font-newsreader",
-  subsets: ["latin"],
-  weight: ["400", "500"],
-});
+/**
+ * No `next/font` here on purpose: the Archive is set in Helvetica Neue, a
+ * system face on every machine this runs on. Loading a webfont to render it
+ * would be a network round trip for a font already installed.
+ */
 
 export const metadata: Metadata = {
   title: "Wardrobe",
@@ -32,10 +20,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const signedIn = await getSession();
 
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable} h-full antialiased`}
-    >
+    <html lang="en" className="h-full antialiased">
       <body className="flex min-h-full flex-col">
         {signedIn && (
           <header className="border-hair border-b">

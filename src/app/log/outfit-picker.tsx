@@ -70,7 +70,7 @@ export function OutfitPicker({
         </div>
 
         {selected.length === 0 ? (
-          <p className="text-muted border-hair rounded-2xl border border-dashed px-5 py-8 text-center text-sm">
+          <p className="text-muted border-hair border border-dashed px-5 py-8 text-center text-sm">
             Nothing logged for this day yet. Tap anything below to add it.
           </p>
         ) : (
@@ -80,14 +80,14 @@ export function OutfitPicker({
                 <button
                   type="button"
                   onClick={() => toggle(item)}
-                  className="border-sage/40 bg-sage-soft hover:border-cpw-bad group flex items-center gap-2 rounded-full border py-1.5 pr-3 pl-1.5 text-sm transition-colors"
+                  className="border-sage/40 bg-sage-soft hover:border-cpw-bad group flex items-center gap-2 border py-1.5 pr-3 pl-1.5 text-sm transition-colors"
                   title="Remove from this day"
                 >
                   <ItemPhoto
                     name={item.name}
                     imagePath={item.imagePath}
                     category={item.category}
-                    className="size-7 shrink-0 rounded-full"
+                    className="size-7 shrink-0"
                     garmentClassName="h-[70%] w-[70%]"
                   />
                   <span className="max-w-52 truncate">{item.name}</span>
@@ -107,7 +107,7 @@ export function OutfitPicker({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by name or brand…"
             aria-label="Search items"
-            className="border-hair focus:border-sage w-full rounded-lg border bg-card px-3 py-2 text-sm outline-none"
+            className="border-hair focus:border-sage w-full border bg-card px-3 py-2 text-sm outline-none"
           />
 
           <div className="flex flex-wrap gap-1.5">
@@ -139,7 +139,7 @@ export function OutfitPicker({
                     type="button"
                     onClick={() => toggle(item)}
                     aria-pressed={on}
-                    className={`group flex w-full flex-col rounded-xl border p-2 text-left transition-colors ${
+                    className={`group flex w-full flex-col border p-2 text-left transition-colors ${
                       on
                         ? "border-sage bg-sage-soft"
                         : "border-hair hover:border-sage/40 bg-card"
@@ -149,7 +149,7 @@ export function OutfitPicker({
                       name={item.name}
                       imagePath={item.imagePath}
                       category={item.category}
-                      className="aspect-square rounded-lg"
+                      className="aspect-square"
                       garmentClassName="h-[70%] w-[62%]"
                     />
                     <p
@@ -209,7 +209,7 @@ function QuickAdd({ query, onAdded }: { query: string; onAdded: () => void }) {
   }
 
   return (
-    <div className="border-hair flex flex-col gap-3 rounded-2xl border border-dashed px-5 py-6">
+    <div className="border-hair flex flex-col gap-3 border border-dashed px-5 py-6">
       <p className="text-muted text-sm">
         Nothing in your closet matches “{query}”. Add it?
       </p>
@@ -231,7 +231,7 @@ function QuickAdd({ query, onAdded }: { query: string; onAdded: () => void }) {
           type="button"
           onClick={add}
           disabled={pending}
-          className="bg-sage hover:bg-sage/90 rounded-full px-4 py-1.5 text-xs font-medium text-white transition-colors disabled:opacity-50"
+          className="bg-sage hover:bg-sage/90 px-4 py-1.5 text-xs font-medium text-white transition-colors disabled:opacity-50"
         >
           {pending ? "Adding…" : "Add to closet"}
         </button>
@@ -261,7 +261,7 @@ function CategoryChip({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full px-2.5 py-1 text-xs capitalize transition-colors ${
+      className={`px-2.5 py-1 text-xs capitalize transition-colors ${
         active
           ? "bg-ink text-paper"
           : "border-hair text-muted hover:border-ink border"

@@ -72,12 +72,12 @@ export function CostPerWearBar({
   return (
     <div className="flex items-center gap-2.5">
       <div
-        className={`bg-hair flex-1 overflow-hidden rounded-full ${
+        className={`bg-hair flex-1 overflow-hidden ${
           size === "lg" ? "h-1.5" : "h-1"
         }`}
       >
         <div
-          className="h-full rounded-full"
+          className="h-full"
           style={{
             width: `${fillWidth(cents) * 100}%`,
             background: BAR[tone],

@@ -90,14 +90,14 @@ export default async function CalendarPage({
             <Link
               href={`/calendar?month=${prev.year}-${pad(prev.month)}`}
               aria-label="Previous month"
-              className="border-hair hover:border-ink rounded-full border px-3 py-1.5 text-sm transition-colors"
+              className="border-hair hover:border-ink border px-3 py-1.5 text-sm transition-colors"
             >
               ←
             </Link>
             <Link
               href={`/calendar?month=${next.year}-${pad(next.month)}`}
               aria-label="Next month"
-              className="border-hair hover:border-ink rounded-full border px-3 py-1.5 text-sm transition-colors"
+              className="border-hair hover:border-ink border px-3 py-1.5 text-sm transition-colors"
             >
               →
             </Link>
@@ -106,7 +106,7 @@ export default async function CalendarPage({
                 <Link
                   key={y}
                   href={`/calendar?month=${y}-${pad(y === today.getUTCFullYear() ? today.getUTCMonth() + 1 : 1)}`}
-                  className={`rounded-full px-2.5 py-1 text-xs tabular-nums transition-colors ${
+                  className={`px-2.5 py-1 text-xs tabular-nums transition-colors ${
                     y === year
                       ? "bg-ink text-paper"
                       : "border-hair text-muted hover:border-ink border"
@@ -133,7 +133,7 @@ export default async function CalendarPage({
                   className="group flex flex-1 flex-col gap-1"
                 >
                   <span
-                    className={`block h-1.5 rounded-full ${m === month ? "ring-ink ring-1 ring-offset-1" : ""}`}
+                    className={`block h-1.5 ${m === month ? "ring-ink ring-1 ring-offset-1" : ""}`}
                     style={{
                       background:
                         ratio === 0
@@ -178,7 +178,7 @@ export default async function CalendarPage({
                   key={date}
                   href={`/log?date=${date}`}
                   aria-label={`${date}, ${count} items logged`}
-                  className={`flex aspect-square flex-col rounded-xl border p-1.5 transition-colors ${
+                  className={`flex aspect-square flex-col border p-1.5 transition-colors ${
                     future
                       ? "border-hair/60 pointer-events-none opacity-40"
                       : count > 0
@@ -199,7 +199,7 @@ export default async function CalendarPage({
                       {Array.from({ length: Math.min(count, 9) }, (_, i) => (
                         <i
                           key={i}
-                          className="bg-sage block size-[5px] rounded-full opacity-80"
+                          className="bg-sage block size-[5px] opacity-80"
                         />
                       ))}
                     </span>
@@ -212,10 +212,10 @@ export default async function CalendarPage({
 
         <div className="text-muted flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
           <span className="flex items-center gap-1.5">
-            <i className="bg-sage size-2 rounded-full" /> one dot per item worn
+            <i className="bg-sage size-2" /> one dot per item worn
           </span>
           <span className="flex items-center gap-1.5">
-            <i className="border-cpw-bad/60 size-2.5 rounded-[3px] border border-dashed" />{" "}
+            <i className="border-cpw-bad/60 size-2.5 border border-dashed" />{" "}
             nothing logged
           </span>
           <span>Tap any day to log it.</span>

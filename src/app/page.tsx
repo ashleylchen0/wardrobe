@@ -55,7 +55,7 @@ export default async function ClosetPage({
           </p>
           <Link
             href="/items/new"
-            className="border-hair hover:border-ink ml-auto rounded-full border px-4 py-1.5 text-xs transition-colors"
+            className="border-hair hover:border-ink ml-auto border px-4 py-1.5 text-xs transition-colors"
           >
             Add item
           </Link>
@@ -112,7 +112,7 @@ export default async function ClosetPage({
         </div>
 
         {itemList.length === 0 ? (
-          <p className="text-muted border-hair rounded-2xl border border-dashed px-6 py-16 text-center text-sm">
+          <p className="text-muted border-hair border border-dashed px-6 py-16 text-center text-sm">
             {status === "archived"
               ? "Nothing archived yet. Open an item and choose Archive when you donate or sell it."
               : "Nothing in this category yet."}

@@ -12,7 +12,7 @@ export function FilterChip({
   return (
     <Link
       href={href}
-      className={`rounded-full border px-3 py-1 text-xs capitalize transition-colors ${
+      className={`border px-3 py-1 text-xs capitalize transition-colors ${
         active
           ? "border-sage bg-sage font-medium text-white"
           : "border-hair text-muted hover:border-sage hover:text-sage"
