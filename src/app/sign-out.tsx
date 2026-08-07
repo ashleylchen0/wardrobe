@@ -9,8 +9,8 @@ export function SignOutButton() {
   }
 
   return (
-    <form action={signOut} className="ml-auto">
-      <button type="submit" className="eyebrow hover:text-ink transition-colors">
+    <form action={signOut} className="">
+      <button type="submit" className="microcap text-muted hover:text-ink text-[10px] transition-colors">
         Sign out
       </button>
     </form>

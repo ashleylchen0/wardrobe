@@ -8,8 +8,9 @@ import type { Category } from "@/lib/categories";
 export { CATEGORIES, isCategory, type Category } from "@/lib/categories";
 
 export const SORTS = {
-  cpw: "Cost per wear",
-  worn: "Times worn",
+  worn: "Most worn",
+  recent: "Recently worn",
+  cpw: "Cost/wear low → high",
   cost: "Cost",
   brand: "Brand",
   name: "Name",
@@ -41,6 +42,9 @@ export async function getClosetItems({
   const orderBy = {
     cpw: [sql`${itemStats.costPerWearCents} ASC NULLS LAST`],
     worn: [desc(itemStats.timesWorn), asc(items.name)],
+    // Never-worn items have no last wear date; they belong at the end rather
+    // than at the top of a list about recency.
+    recent: [sql`${itemStats.lastWorn} DESC NULLS LAST`, asc(items.name)],
     cost: [sql`${items.costCents} DESC NULLS LAST`],
     brand: [sql`${items.brand} ASC NULLS LAST`, asc(items.name)],
     name: [asc(items.name)],

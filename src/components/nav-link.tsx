@@ -12,8 +12,8 @@ export function NavLink({ href, children }: { href: string; children: React.Reac
       href={href}
       className={
         active
-          ? "eyebrow text-ink border-ink border-b pb-0.5"
-          : "eyebrow hover:text-ink border-b border-transparent pb-0.5 transition-colors"
+          ? "microcap text-ink border-ink border-b pb-0.5 text-[10px] font-bold"
+          : "microcap text-muted hover:text-ink border-b border-transparent pb-0.5 text-[10px] transition-colors"
       }
     >
       {children}

@@ -1,8 +1,13 @@
-import { Garment } from "@/components/garment";
+import { categoryEmoji } from "@/lib/format";
 import type { Category } from "@/lib/categories";
 
 /**
- * The item's photo when there is one, and category artwork when there isn't.
+ * The item's photo when there is one, and the category's emoji when there
+ * isn't.
+ *
+ * The previous stand-in was tinted per category, which made the grid the most
+ * colorful surface in a monochrome app. Greyscale emoji at low opacity keep
+ * categories scannable without reintroducing a palette.
  *
  * Photos live in a private blob store, so they come through the /api/photo
  * proxy rather than being addressed directly.
@@ -12,14 +17,14 @@ export function ItemPhoto({
   imagePath,
   category,
   className = "",
-  garmentClassName = "h-[78%] w-[58%]",
+  emojiClassName = "text-4xl",
   eager = false,
 }: {
   name: string;
   imagePath: string | null;
   category: Category;
   className?: string;
-  garmentClassName?: string;
+  emojiClassName?: string;
   eager?: boolean;
 }) {
   return (
@@ -30,12 +35,15 @@ export function ItemPhoto({
           src={`/api/photo/${imagePath}`}
           alt={name}
           loading={eager ? "eager" : "lazy"}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+          className="h-full w-full object-cover"
         />
       ) : (
-        <div className="grid h-full w-full place-items-center">
-          <Garment category={category} className={garmentClassName} />
-        </div>
+        <span
+          aria-hidden="true"
+          className={`absolute inset-0 grid place-items-center grayscale opacity-35 ${emojiClassName}`}
+        >
+          {categoryEmoji(category)}
+        </span>
       )}
     </div>
   );

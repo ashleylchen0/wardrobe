@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CostPerWearBar } from "@/components/cost-per-wear";
+import { CostPerWear } from "@/components/cost-per-wear";
 import { ItemPhoto } from "@/components/item-photo";
 import { WearHistory } from "@/components/wear-history";
 import { money } from "@/lib/format";
@@ -42,7 +42,7 @@ export default async function ItemPage({
             className={`aspect-[4/5] ${
               archived ? "opacity-55 grayscale" : ""
             }`}
-            garmentClassName="h-[72%] w-[62%]"
+            emojiClassName="text-6xl"
             eager
           />
           <PhotoUpload itemId={item.id} hasPhoto={!!item.imagePath} />
@@ -97,7 +97,7 @@ export default async function ItemPage({
               gets its own block rather than a slot in the stat row. */}
           <div className="border-hair flex flex-col gap-2.5 border bg-card px-5 py-4">
             <p className="eyebrow">Cost per wear</p>
-            <CostPerWearBar
+            <CostPerWear
               costPerWearCents={costPerWearCents}
               timesWorn={timesWorn}
               costCents={item.costCents}

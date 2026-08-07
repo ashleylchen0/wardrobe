@@ -88,7 +88,7 @@ export function OutfitPicker({
                     imagePath={item.imagePath}
                     category={item.category}
                     className="size-7 shrink-0"
-                    garmentClassName="h-[70%] w-[70%]"
+                    emojiClassName="text-[11px]"
                   />
                   <span className="max-w-52 truncate">{item.name}</span>
                   <span className="text-muted group-hover:text-cpw-bad">×</span>
@@ -150,7 +150,7 @@ export function OutfitPicker({
                       imagePath={item.imagePath}
                       category={item.category}
                       className="aspect-square"
-                      garmentClassName="h-[70%] w-[62%]"
+                      emojiClassName="text-3xl"
                     />
                     <p
                       className="mt-2 truncate text-xs leading-snug"

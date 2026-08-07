@@ -1,3 +1,25 @@
+import type { Category } from "@/lib/categories";
+
+/**
+ * Stand-in artwork for items with no photo. Set greyscale at low opacity so a
+ * grid of them reads as texture rather than as a row of stickers — the Archive
+ * has no color outside cost per wear.
+ */
+const CATEGORY_EMOJI: Record<Category, string> = {
+  tops: "👕",
+  sweaters: "🧶",
+  bottoms: "🩳",
+  jeans: "👖",
+  dresses: "👗",
+  outerwear: "🧥",
+  shoes: "👟",
+  accessories: "👜",
+};
+
+export function categoryEmoji(category: Category): string {
+  return CATEGORY_EMOJI[category] ?? "👕";
+}
+
 /** Cost is stored in cents; null means unrecorded, which is not the same as $0. */
 export function money(cents: number | null | undefined): string | null {
   if (cents === null || cents === undefined) return null;
