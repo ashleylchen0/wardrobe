@@ -45,6 +45,9 @@ export function ItemForm({
   const [error, setError] = useState<string | null>(null);
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const [productUrl, setProductUrl] = useState(item?.productUrl ?? "");
+  // Deliberately not persisted: once fetched, the picture lives in blob storage
+  // and the link it came from stops mattering.
+  const [imageLink, setImageLink] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageNote, setImageNote] = useState<string | null>(null);
   const [direct, setDirect] = useState(false);
@@ -55,11 +58,11 @@ export function ItemForm({
   const acquiredValue =
     item?.acquiredPrecision === "day" ? (item.acquiredOn ?? "") : "";
 
-  async function grabImage() {
+  async function grabImage(source: string) {
     setFetching(true);
     setImageNote(null);
     try {
-      const result = await fetchProductImage(productUrl);
+      const result = await fetchProductImage(source);
       if (result.ok) {
         setImageUrl(result.imageUrl);
         setDirect(result.direct);
@@ -208,9 +211,13 @@ export function ItemForm({
         </Field>
       </div>
 
+      {/* Two boxes, because they answer different questions: the listing is
+          where to go and look at the thing, the image link is which picture you
+          actually want. A listing's own preview is often a model shot or a
+          collage, so being able to name the image directly matters. */}
       <Field
-        label="Product link or image link"
-        hint="Optional. Paste a listing and it reads that page's preview image, or paste an image link (ending .jpg, .png, .webp) to use it directly. Either way the file is copied into your own storage, so it survives the original coming down."
+        label="Product link"
+        hint="Optional. Saved with the item so you can reopen the listing later."
       >
         <div className="flex flex-wrap items-center gap-2">
           <input
@@ -223,11 +230,35 @@ export function ItemForm({
           />
           <button
             type="button"
-            onClick={grabImage}
+            onClick={() => grabImage(productUrl)}
             disabled={!productUrl.trim() || fetching}
             className="border-hair hover:border-ink border px-4 py-2 text-xs whitespace-nowrap transition-colors disabled:opacity-40"
           >
-            {fetching ? "Fetching…" : "Fetch photo"}
+            {fetching ? "Fetching…" : "Use page's photo"}
+          </button>
+        </div>
+      </Field>
+
+      <Field
+        label="Image link"
+        hint="Optional. A link to the picture itself — right-click an image on the site and copy its address. Not stored; the file is copied into your own storage, so it survives the original coming down."
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="url"
+            value={imageLink}
+            onChange={(e) => setImageLink(e.target.value)}
+            placeholder="https://…/photo.jpg"
+            aria-label="Image link"
+            className="border-hair focus:border-ink min-w-56 flex-1 border bg-card px-3 py-2 text-sm outline-none"
+          />
+          <button
+            type="button"
+            onClick={() => grabImage(imageLink)}
+            disabled={!imageLink.trim() || fetching}
+            className="border-hair hover:border-ink border px-4 py-2 text-xs whitespace-nowrap transition-colors disabled:opacity-40"
+          >
+            {fetching ? "Fetching…" : "Use this image"}
           </button>
         </div>
       </Field>
