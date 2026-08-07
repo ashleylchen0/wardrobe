@@ -3,13 +3,20 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useOptimistic, useState, useTransition } from "react";
-import { ItemPhoto } from "@/components/item-photo";
 import { createItem } from "@/app/items/new-item-actions";
 import { moneyFromNumeric } from "@/lib/format";
 import { CATEGORIES, type Category } from "@/lib/categories";
 import type { PickableItem } from "@/lib/queries";
 import { setWear } from "./actions";
 
+/**
+ * Laid out as a search-and-list the way the prototype's log page is: a day's
+ * outfit is five or six pieces, so a scannable list of names beats a grid of
+ * tiles you have to read pictorially.
+ *
+ * The interaction is still this app's own — tapping writes the wear
+ * immediately, optimistically, with no Save step to forget.
+ */
 export function OutfitPicker({
   date,
   items,
@@ -23,13 +30,11 @@ export function OutfitPicker({
   const [category, setCategory] = useState<Category | null>(null);
   const [, startTransition] = useTransition();
 
-  // Optimistic so tapping a tile feels instant; the server action reconciles.
+  // Optimistic so tapping a row feels instant; the server action reconciles.
   const [worn, setWorn] = useOptimistic(
     wornItemIds,
     (state: string[], change: { id: string; on: boolean }) =>
-      change.on
-        ? [...state, change.id]
-        : state.filter((id) => id !== change.id),
+      change.on ? [...state, change.id] : state.filter((id) => id !== change.id),
   );
 
   const wornSet = useMemo(() => new Set(worn), [worn]);
@@ -37,6 +42,7 @@ export function OutfitPicker({
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     return items.filter((item) => {
+      if (wornSet.has(item.id)) return false;
       if (category && item.category !== category) return false;
       if (!q) return true;
       return (
@@ -44,12 +50,14 @@ export function OutfitPicker({
         (item.brand?.toLowerCase().includes(q) ?? false)
       );
     });
-  }, [items, query, category]);
+  }, [items, query, category, wornSet]);
 
   const selected = useMemo(
     () => items.filter((i) => wornSet.has(i.id)),
     [items, wornSet],
   );
+
+  const shown = visible.slice(0, 24);
 
   function toggle(item: PickableItem) {
     const on = !wornSet.has(item.id);
@@ -60,115 +68,92 @@ export function OutfitPicker({
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <section className="flex flex-col gap-3">
-        <div className="flex items-baseline justify-between gap-4">
-          <h2 className="eyebrow">Wearing</h2>
-          <span className="text-muted text-xs tabular-nums">
-            {selected.length} {selected.length === 1 ? "item" : "items"}
-          </span>
+    <div className="flex flex-col gap-5">
+      <div>
+        <div className="microcap text-muted pb-1 text-[9px]">
+          Wearing · {selected.length}
         </div>
-
         {selected.length === 0 ? (
-          <p className="text-muted border-hair border border-dashed px-5 py-8 text-center text-sm">
-            Nothing logged for this day yet. Tap anything below to add it.
+          <p className="microcap text-muted border-hair border border-dashed px-3 py-4 text-center text-[10px]">
+            Nothing logged for this day yet — tap anything below to add it.
           </p>
         ) : (
-          <ul className="flex flex-wrap gap-2">
+          <ul className="flex flex-wrap gap-1.5">
             {selected.map((item) => (
               <li key={item.id}>
                 <button
                   type="button"
                   onClick={() => toggle(item)}
-                  className="border-sage/40 bg-sage-soft hover:border-cpw-bad group flex items-center gap-2 border py-1.5 pr-3 pl-1.5 text-sm transition-colors"
+                  className="microcap border-ink hover:bg-tile cursor-pointer border px-2 py-1 text-[9px]"
                   title="Remove from this day"
                 >
-                  <ItemPhoto
-                    name={item.name}
-                    imagePath={item.imagePath}
-                    category={item.category}
-                    className="size-7 shrink-0"
-                    emojiClassName="text-[11px]"
-                  />
-                  <span className="max-w-52 truncate">{item.name}</span>
-                  <span className="text-muted group-hover:text-cpw-bad">×</span>
+                  {item.name} <span className="text-muted">✕</span>
                 </button>
               </li>
             ))}
           </ul>
         )}
-      </section>
+      </div>
 
-      <section className="flex flex-col gap-4">
-        <div className="border-hair flex flex-col gap-3 border-t pt-5">
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by name or brand…"
-            aria-label="Search items"
-            className="border-hair focus:border-sage w-full border bg-card px-3 py-2 text-sm outline-none"
-          />
+      <div>
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={`Search ${items.length} items`}
+          aria-label="Search items"
+          className="border-ink w-full border bg-transparent px-2 py-2 text-[13px] outline-none"
+        />
 
-          <div className="flex flex-wrap gap-1.5">
-            <CategoryChip active={!category} onClick={() => setCategory(null)}>
-              Everything
+        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+          <CategoryChip active={!category} onClick={() => setCategory(null)}>
+            Everything
+          </CategoryChip>
+          {CATEGORIES.map((c) => (
+            <CategoryChip
+              key={c}
+              active={category === c}
+              onClick={() => setCategory(category === c ? null : c)}
+            >
+              {c}
             </CategoryChip>
-            {CATEGORIES.map((c) => (
-              <CategoryChip
-                key={c}
-                active={category === c}
-                onClick={() => setCategory(category === c ? null : c)}
-              >
-                {c}
-              </CategoryChip>
-            ))}
-          </div>
+          ))}
         </div>
 
         {visible.length === 0 ? (
           <QuickAdd query={query.trim()} onAdded={() => setQuery("")} />
         ) : (
-          <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-            {visible.map((item) => {
-              const on = wornSet.has(item.id);
+          <ul className="divide-hair border-hair mt-2 max-h-72 divide-y overflow-y-auto border">
+            {shown.map((item) => {
               const cpw = moneyFromNumeric(item.costPerWearCents);
               return (
                 <li key={item.id}>
                   <button
                     type="button"
                     onClick={() => toggle(item)}
-                    aria-pressed={on}
-                    className={`group flex w-full flex-col border p-2 text-left transition-colors ${
-                      on
-                        ? "border-sage bg-sage-soft"
-                        : "border-hair hover:border-sage/40 bg-card"
-                    }`}
+                    className="hover:bg-tile flex w-full cursor-pointer items-baseline justify-between gap-3 px-2 py-1.5 text-left"
                   >
-                    <ItemPhoto
-                      name={item.name}
-                      imagePath={item.imagePath}
-                      category={item.category}
-                      className="aspect-square"
-                      emojiClassName="text-3xl"
-                    />
-                    <p
-                      className="mt-2 truncate text-xs leading-snug"
-                      title={item.name}
-                    >
+                    <span className="microcap min-w-0 truncate text-[10px] font-bold">
                       {item.name}
-                    </p>
-                    <p className="text-muted truncate text-[11px] tabular-nums">
-                      {item.timesWorn} {item.timesWorn === 1 ? "wear" : "wears"}
-                      {cpw && ` · ${cpw}`}
-                    </p>
+                      <span className="text-muted ml-2 font-normal">
+                        {item.brand ?? ""}
+                      </span>
+                    </span>
+                    <span className="text-muted shrink-0 text-[10px] tabular-nums">
+                      {item.timesWorn}×{cpw && ` · ${cpw}`}
+                    </span>
                   </button>
                 </li>
               );
             })}
+            {visible.length > shown.length && (
+              <li className="microcap text-muted px-2 py-1.5 text-[9px]">
+                + {visible.length - shown.length} more — keep typing
+              </li>
+            )}
           </ul>
         )}
-      </section>
+      </div>
     </div>
   );
 }
@@ -186,7 +171,7 @@ function QuickAdd({ query, onAdded }: { query: string; onAdded: () => void }) {
 
   if (!query) {
     return (
-      <p className="text-muted py-10 text-center text-sm">
+      <p className="microcap text-muted py-8 text-center text-[10px]">
         No items match that filter.
       </p>
     );
@@ -209,12 +194,12 @@ function QuickAdd({ query, onAdded }: { query: string; onAdded: () => void }) {
   }
 
   return (
-    <div className="border-hair flex flex-col gap-3 border border-dashed px-5 py-6">
-      <p className="text-muted text-sm">
-        Nothing in your closet matches “{query}”. Add it?
+    <div className="border-hair mt-2 flex flex-col gap-3 border border-dashed px-3 py-4">
+      <p className="microcap text-[10px]">
+        Nothing matches “{query}”. Add it to the closet?
       </p>
 
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-x-3 gap-y-1">
         {CATEGORIES.map((c) => (
           <CategoryChip
             key={c}
@@ -226,24 +211,24 @@ function QuickAdd({ query, onAdded }: { query: string; onAdded: () => void }) {
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-4">
         <button
           type="button"
           onClick={add}
           disabled={pending}
-          className="bg-sage hover:bg-sage/90 px-4 py-1.5 text-xs font-medium text-white transition-colors disabled:opacity-50"
+          className="microcap bg-ink text-paper cursor-pointer px-3 py-1.5 text-[10px] font-bold disabled:opacity-30"
         >
           {pending ? "Adding…" : "Add to closet"}
         </button>
         <Link
           href="/items/new"
-          className="text-muted hover:text-ink text-xs underline underline-offset-4"
+          className="microcap text-muted hover:text-ink text-[9px] underline underline-offset-4"
         >
           Add with full details instead
         </Link>
       </div>
 
-      {error && <p className="text-cpw-bad text-xs">{error}</p>}
+      {error && <p className="text-cpw-bad text-[11px]">{error}</p>}
     </div>
   );
 }
@@ -261,10 +246,10 @@ function CategoryChip({
     <button
       type="button"
       onClick={onClick}
-      className={`px-2.5 py-1 text-xs capitalize transition-colors ${
+      className={`microcap cursor-pointer pb-0.5 text-[10px] capitalize ${
         active
-          ? "bg-ink text-paper"
-          : "border-hair text-muted hover:border-ink border"
+          ? "border-ink border-b font-bold"
+          : "text-muted hover:text-ink transition-colors"
       }`}
     >
       {children}
