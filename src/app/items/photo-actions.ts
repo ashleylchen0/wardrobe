@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { items } from "@/db/schema";
 import { getSession } from "@/lib/auth";
+import { normalizePhoto } from "@/lib/knockout";
 
 /** Belt-and-braces: images are already downscaled client-side to ~1200px. */
 const MAX_BYTES = 4 * 1024 * 1024;
@@ -38,14 +39,19 @@ export async function uploadPhoto(itemId: string, formData: FormData) {
       .replace(/^-|-$/g, "")
       .slice(0, 48) || "item";
 
-  const extension = file.type === "image/webp" ? "webp" : "jpg";
+  // Same treatment as a linked photo, so it makes no difference to the grid
+  // which way a picture got here. Falls back to a plain resize when the
+  // backdrop isn't flat enough to cut against.
+  const { buffer } = await normalizePhoto(
+    Buffer.from(await file.arrayBuffer()),
+  );
 
   // `access: "private"` matches the store — photos are only reachable through
   // /api/photo, which checks the session first.
-  const blob = await put(`items/${slug}.${extension}`, file, {
+  const blob = await put(`items/${slug}.webp`, buffer, {
     access: "private",
     addRandomSuffix: true,
-    contentType: file.type,
+    contentType: "image/webp",
   });
 
   await db

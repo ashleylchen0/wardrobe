@@ -9,6 +9,7 @@ import { items } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { CATEGORIES } from "@/lib/categories";
 import { refineBottoms } from "@/lib/categorize";
+import { normalizePhoto } from "@/lib/knockout";
 
 export type CreateResult =
   | { ok: true; id: string }
@@ -86,18 +87,16 @@ async function storeRemoteImage(
       return null;
     }
 
-    const extension = contentType.includes("png")
-      ? "png"
-      : contentType.includes("webp")
-        ? "webp"
-        : contentType.includes("avif")
-          ? "avif"
-          : "jpg";
+    // Listing images arrive on whatever studio backdrop the retailer shoots
+    // against, and a grid of six different greys reads as noise. Cutting the
+    // background here is what keeps a linked photo looking like every other
+    // tile. Falls back to a plain resize when the backdrop isn't flat.
+    const { buffer } = await normalizePhoto(Buffer.from(bytes));
 
-    const blob = await put(`items/${slug}.${extension}`, bytes, {
+    const blob = await put(`items/${slug}.webp`, buffer, {
       access: "private",
       addRandomSuffix: true,
-      contentType,
+      contentType: "image/webp",
     });
     return blob.pathname;
   } catch {

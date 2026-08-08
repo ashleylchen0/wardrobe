@@ -19,6 +19,7 @@ export function ItemPhoto({
   className = "",
   emojiClassName = "text-4xl",
   eager = false,
+  inset = "p-[7%]",
 }: {
   name: string;
   imagePath: string | null;
@@ -26,6 +27,13 @@ export function ItemPhoto({
   className?: string;
   emojiClassName?: string;
   eager?: boolean;
+  /**
+   * Breathing room between the garment and the edge of the well. A percentage
+   * rather than a fixed padding because this renders from a 40px register row
+   * up to the full detail view, and `p-4` that reads as generous on the detail
+   * page would swallow a thumbnail whole.
+   */
+  inset?: string;
 }) {
   return (
     <div className={`bg-tile relative overflow-hidden ${className}`}>
@@ -35,7 +43,7 @@ export function ItemPhoto({
           src={`/api/photo/${imagePath}`}
           alt={name}
           loading={eager ? "eager" : "lazy"}
-          className="h-full w-full object-cover"
+          className={`h-full w-full object-contain ${inset}`}
         />
       ) : (
         <span
