@@ -6,6 +6,10 @@
  * hand-uploaded one.
  *
  * Run: npx tsx --env-file=.env.local scripts/attach-photos.ts [--dry-run]
+ *
+ * `--only <text>` narrows the run to jobs whose file name contains `text`. The
+ * job list only grows, so without it every rerun re-renders and re-uploads
+ * photos that are already attached and unchanged.
  */
 
 import { del, put } from "@vercel/blob";
@@ -32,9 +36,33 @@ const JOBS: Job[] = [
   { file: "levis black jeans.png", items: ["levis black jeans"] },
   { file: "levis dad jeans blue.png", items: ["levis dad jeans blue"] },
   { file: "black stussy honolulu.png", items: ["black stussy honolulu"] },
+  {
+    file: "black contour ravish top artizia.png",
+    items: ["black contour ravish top artizia"],
+  },
+  { file: "peter pan tee.png", items: ["peter pan tee"] },
+  {
+    file: "weekday white black knit sweater.png",
+    items: ["white black knit sweater"],
+  },
+  { file: "rei green quilted puffer.png", items: ["green quilted puffer"] },
+  { file: "little puffy hoodie.jpg", items: ["LP hoodie"] },
+  { file: "nordstrom nude kitten heels.png", items: ["nude kitten heels"] },
+  { file: "thredup blue floral midi dress.jpg", items: ["blue floral midi dress"] },
+  { file: "nb 550.png", items: ["NB 550"] },
+  { file: "and other stories black v neck dress.png", items: ["black v neck dress"] },
+  { file: "billy j yellow midi dress slit.png", items: ["yellow midi dress slit"] },
+  {
+    file: "birdy grey beige satin slip dress.png",
+    items: ["beige satin slip dress"],
+  },
+  { file: "tonya light wash straight jeans.png", items: ["light wash straight jeans"] },
+  { file: "lattice black adjustable bag.JPG", items: ["black adjustable bag"] },
 ];
 
 const dryRun = process.argv.includes("--dry-run");
+const onlyIndex = process.argv.indexOf("--only");
+const only = onlyIndex === -1 ? null : process.argv[onlyIndex + 1].toLowerCase();
 const sql = neon(process.env.DATABASE_URL!);
 
 function slugify(name: string) {
@@ -58,7 +86,11 @@ async function render(job: Job) {
 async function main() {
   console.log(dryRun ? "DRY RUN — nothing will be written\n" : "");
 
-  for (const job of JOBS) {
+  const jobs = only
+    ? JOBS.filter((job) => job.file.toLowerCase().includes(only))
+    : JOBS;
+
+  for (const job of jobs) {
     console.log(`${job.file}`);
 
     const rows = await sql`

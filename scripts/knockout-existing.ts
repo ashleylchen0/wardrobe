@@ -6,10 +6,12 @@
  * `get(pathname, { access: "private" })`, the same call the /api/photo route
  * uses, processed in memory, and written back as a new blob.
  *
- * Previews by default; pass --apply to write.
+ * Previews by default; pass --apply to write. With no selector it walks the
+ * whole library and skips anything already cut out, which is the way to find
+ * photos that still carry a backdrop; --only narrows a rerun to one item.
  *
  *   npx tsx --env-file=.env.local scripts/knockout-existing.ts --category accessories
- *   npx tsx --env-file=.env.local scripts/knockout-existing.ts --category accessories --apply
+ *   npx tsx --env-file=.env.local scripts/knockout-existing.ts --only "gray baby tee" --apply
  */
 
 import { mkdir, writeFile } from "node:fs/promises";
@@ -17,56 +19,113 @@ import { join } from "node:path";
 import { del, get, put } from "@vercel/blob";
 import { neon } from "@neondatabase/serverless";
 import sharp from "sharp";
-import { knockout, plain } from "../src/lib/knockout";
+import { knockout, plain, type Holes } from "../src/lib/knockout";
+import { auditPhoto } from "./audit-backgrounds";
+import { lift } from "./lift";
 
 const sql = neon(process.env.DATABASE_URL!);
 
 const apply = process.argv.includes("--apply");
 const categoryIndex = process.argv.indexOf("--category");
 const category = categoryIndex === -1 ? null : process.argv[categoryIndex + 1];
+const onlyIndex = process.argv.indexOf("--only");
+const only = onlyIndex === -1 ? null : process.argv[onlyIndex + 1].toLowerCase();
 const previewIndex = process.argv.indexOf("--preview-dir");
 const PREVIEW =
   previewIndex === -1 ? "/tmp/knockout-preview" : process.argv[previewIndex + 1];
 
+/**
+ * A fill this wide has eaten the subject rather than the backdrop — the whole
+ * frame came back transparent. `normalizePhoto` refuses at the same threshold;
+ * this script writes straight to the blob store, so it has to refuse too.
+ */
+const RUNAWAY = 0.985;
+
 /** The tile the closet grid paints behind photos, for honest previews. */
 const TILE = "#f1efeb";
+
+/** Nothing in a garment photo is this colour, so cleared pixels are unmistakable. */
+const CHECK = "#ff00ff";
+
+const GUTTER = 16;
 
 type ItemOptions = {
   /** Resize only. For photos where no colour gap exists to knock out against. */
   plain?: true;
+  /**
+   * Cut the subject out with Vision rather than the flood fill — see `lift.ts`.
+   * This is what the entries below that used to be `plain` now use: the fill
+   * needs a backdrop to sample and a colour gap to stop at, and a photo shot in
+   * a room offers neither, but matting only needs the silhouette.
+   */
+  lift?: true;
+  /** Overrides the tolerance the knockout derives from the backdrop fit. */
   tolerance?: number;
-  maxSpread?: number;
+  /** See `Holes` — `clear` also removes backdrop trapped inside the subject. */
+  holes?: Holes;
   crop?: { top?: number; right?: number; bottom?: number; left?: number };
 };
+
+/**
+ * UNIQLO's model shots stamp the model's height and the size worn into the
+ * bottom-right corner. It is not the backdrop colour, so the fill leaves it and
+ * the trim then anchors to it, framing the garment around a line of text.
+ */
+const UNIQLO_SIZE_STAMP = { bottom: 0.1 };
 
 /**
  * Per-item handling, keyed by item name. Everything here was set by looking at
  * a preview, not guessed.
  */
 const ITEM_OPTIONS: Record<string, ItemOptions> = {
-  // Worn on a model against a near-white wall: shirt, skin and backdrop all sit
-  // within a few levels, so any tolerance wide enough to clear the wall also
-  // eats the shirt. Resize only.
-  "white tee m": { plain: true },
-
   // Carries a JW Anderson x UNIQLO lockup in the top-left. It survives the fill
   // and then anchors the trim, leaving the jeans small and off-centre.
   "jwa jeans": { crop: { top: 0.09 } },
 
-  // Model shot where the lit side of the skin sits within a few levels of the
-  // backdrop. A tolerance tight enough to spare her arm leaves grey patches
-  // stranded mid-frame; one wide enough to clear them tears holes in her face.
-  // No threshold separates the two, so this one is resize-only.
-  "Black one shoulder top": { plain: true },
+  // UNIQLO model shots, which stamp the model's height into the corner.
+  "Black heattech thick": { crop: UNIQLO_SIZE_STAMP },
+  "Black puffer vest": { crop: UNIQLO_SIZE_STAMP },
+  "gray baby tee": { crop: UNIQLO_SIZE_STAMP },
+  "wide leg beige sweats": { crop: UNIQLO_SIZE_STAMP },
+  "brown linen pants": { crop: UNIQLO_SIZE_STAMP },
 
-  // Gentle studio vignettes — the corners drift a little but the backdrop is
-  // still flat enough to fill against. These also need a wider tolerance than
-  // the default: the vignette drifts far enough from the sampled corner that a
-  // tight threshold strands patches of grey mid-frame. All are dark subjects on
-  // pale backdrops, so there is headroom before the fill could reach them.
-  "black shorts OV": { maxSpread: 20, tolerance: 60 },
-  "Doc Martens": { maxSpread: 20, tolerance: 60 },
-  "brown mary janes": { maxSpread: 20, tolerance: 60 },
+  // A dark garment, so there is no risk in also clearing the backdrop trapped
+  // between the model's arm and her body.
+  "Black one shoulder top": { holes: "clear" },
+
+  // The backdrop here is a retouched constant and the cuff is barely off it, so
+  // even the derived tolerance takes a bite out of the sleeve. Three levels is
+  // enough to lift a mathematically flat backdrop.
+  "white waffle long sleeve": { tolerance: 3 },
+
+  // Everything below defeats the fill for one reason or another, so it is matted
+  // instead. Each kept its backdrop until the lift path existed.
+  //
+  // A macro crop of the collar, where the fabric *is* the border: the backdrop
+  // fit lands on the shirt itself and the fill then clears it.
+  "white ribbed long sleeve": { lift: true },
+
+  // Worn on a model against a near-white wall, with the blown-out tee touching
+  // the frame edge — the fill walks in through the shoulders and shreds it.
+  "white tee m": { lift: true },
+
+  // An upscaled screenshot: the backdrop carries compression noise in every
+  // direction, so a tolerance tight enough to spare the cream sweatshirt leaves
+  // the backdrop speckled and a wider one eats the sweatshirt.
+  "white workout skort": { lift: true },
+
+  // Shot in a room rather than against a backdrop — a bean bag, a side table, a
+  // wall with a floor line in it. The knockout refuses these on its own; the
+  // entries are here so the reason is written down rather than rediscovered.
+  //
+  // Vision lifts every foreground instance, not just the garment, so the black
+  // cushion and the tote beside the model in the sweatpants shot come along.
+  // They read as props on the tile rather than as a room, which is the point.
+  "mauve sweatpants": { lift: true },
+  "brown button down": { lift: true },
+  "green griffith observatory crewneck": { lift: true },
+  "LP hoodie": { lift: true },
+  "tan trench coat": { lift: true },
 };
 
 async function applyCrop(input: Buffer, crop: NonNullable<ItemOptions["crop"]>) {
@@ -87,15 +146,15 @@ async function applyCrop(input: Buffer, crop: NonNullable<ItemOptions["crop"]>) 
 
 /**
  * True when the image already carries real transparency. `hasAlpha` alone is
- * not enough — plenty of PNGs ship a fully opaque alpha channel — so this reads
- * the minimum alpha value rather than trusting the header.
+ * not enough — plenty of PNGs ship a fully opaque alpha channel, and a photo
+ * where the fill only lifted a margin before the trim cropped that margin away
+ * carries real transparency at its feathered edge while keeping every bit of
+ * its backdrop. So this asks the same question the audit does: is the border of
+ * this image actually see-through?
  */
-async function alreadyCutOut(input: Buffer): Promise<boolean> {
-  const meta = await sharp(input).metadata();
-  if (!meta.hasAlpha) return false;
-  const stats = await sharp(input).stats();
-  const alpha = stats.channels[stats.channels.length - 1];
-  return alpha.min < 250;
+async function alreadyCutOut(pathname: string): Promise<boolean> {
+  const audit = await auditPhoto(pathname);
+  return !!audit && audit.ringTransparent >= 0.25;
 }
 
 function slugify(name: string) {
@@ -115,7 +174,7 @@ async function main() {
   // reliable marker of "already processed" and makes reruns cheap.
   const remaining = process.argv.includes("--remaining");
 
-  const rows = category
+  const selected = category
     ? await sql`
         select id, name, image_path from items
         where image_path is not null and category = ${category}
@@ -128,6 +187,12 @@ async function main() {
       : await sql`
           select id, name, image_path from items
           where image_path is not null order by name`;
+
+  const rows = only
+    ? selected.filter((row) =>
+        (row.name as string).toLowerCase().includes(only),
+      )
+    : selected;
 
   console.log(
     `${rows.length} item(s)${category ? ` in ${category}` : ""} — ${apply ? "APPLYING" : "preview only"}\n`,
@@ -150,12 +215,10 @@ async function main() {
 
       const raw = Buffer.from(await new Response(source.stream).arrayBuffer());
 
-      // Refuse to knock out something already knocked out. The corners of a
-      // finished cutout are transparent, so the uniformity check reads garbage
-      // — sometimes rejecting it, but sometimes sampling whatever RGB sits
-      // under the zeroed alpha and eating the subject. `--remaining` avoids
-      // these entirely; `--category` can reach them, so check here too.
-      if (await alreadyCutOut(raw)) {
+      // Refuse to knock out something already knocked out. The border of a
+      // finished cutout is transparent, so the backdrop fit reads whatever RGB
+      // sits under the zeroed alpha and the fill can eat the subject.
+      if (await alreadyCutOut(pathname)) {
         console.log("SKIP — already has a transparent background");
         skipped += 1;
         continue;
@@ -165,33 +228,63 @@ async function main() {
       const input = options.crop ? await applyCrop(raw, options.crop) : raw;
 
       let output: Buffer;
-      if (options.plain) {
+      if (options.lift) {
+        output = await lift(input);
+      } else if (options.plain) {
         output = await plain(input);
       } else {
         const result = await knockout(input, {
           tolerance: options.tolerance,
-          maxSpread: options.maxSpread,
+          holes: options.holes,
         });
+        if (result.cleared > RUNAWAY) {
+          console.log(
+            `SKIP — fill cleared ${(result.cleared * 100).toFixed(0)}%, the subject went with it`,
+          );
+          skipped += 1;
+          continue;
+        }
         output = result.buffer;
         process.stdout.write(`cleared ${(result.cleared * 100).toFixed(0)}% `);
       }
 
       if (!apply) {
-        // Flatten onto the tile so the preview shows what the grid will show;
-        // a bare alpha channel looks fine against anything and hides bleed.
+        // Two panels side by side, and both are needed.
+        //
+        // The tile shows what the closet will show. On its own it is a trap: a
+        // backdrop that survived reads as a pale field, and so does a cleanly
+        // cleared one, so a photo that was never cut at all looks finished.
+        // Against magenta, only the pixels that are really gone go magenta.
         const meta = await sharp(output).metadata();
-        const flat = await sharp({
+        const panel = (background: string) =>
+          sharp({
+            create: {
+              width: meta.width!,
+              height: meta.height!,
+              channels: 3,
+              background,
+            },
+          })
+            .composite([{ input: output }])
+            .png()
+            .toBuffer();
+
+        const pair = await sharp({
           create: {
-            width: meta.width!,
+            width: meta.width! * 2 + GUTTER,
             height: meta.height!,
             channels: 3,
-            background: TILE,
+            background: "#000000",
           },
         })
-          .composite([{ input: output }])
+          .composite([
+            { input: await panel(TILE), left: 0, top: 0 },
+            { input: await panel(CHECK), left: meta.width! + GUTTER, top: 0 },
+          ])
           .png()
           .toBuffer();
-        await writeFile(join(PREVIEW, `${slugify(row.name as string)}.png`), flat);
+
+        await writeFile(join(PREVIEW, `${slugify(row.name as string)}.png`), pair);
         console.log(`preview ${meta.width}x${meta.height}`);
         done += 1;
         continue;
