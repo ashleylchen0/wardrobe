@@ -269,7 +269,9 @@ export function ItemForm({
           <img
             src={imageUrl}
             alt="Preview from the product page"
-            className="bg-tile size-20 object-cover"
+            // Contained on the tile, like every stored photo: `cover` crops a
+            // cutout into a square and hides how it will actually be framed.
+            className="bg-tile size-20 object-contain p-[7%]"
           />
           <div className="flex flex-col gap-1 text-sm">
             <span>{direct ? "Using that image." : "Found a photo on that page."}</span>
