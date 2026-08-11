@@ -58,6 +58,21 @@ const JOBS: Job[] = [
   },
   { file: "tonya light wash straight jeans.png", items: ["light wash straight jeans"] },
   { file: "lattice black adjustable bag.JPG", items: ["black adjustable bag"] },
+  { file: "black patchwork vintage.png", items: ["Black patchwork vintage"] },
+  { file: "brown blazer secondhand.png", items: ["brown blazer"] },
+  { file: "brown side tie tank.png", items: ["Brown side tie tank"] },
+  {
+    file: "free people black cross front sweater.png",
+    items: ["Black cross front sweater"],
+  },
+  { file: "korea brown cargo pants.png", items: ["Brown cargo pants"] },
+  {
+    file: "lululemon brown workout long sleeve.png",
+    items: ["brown workout long sleeve"],
+  },
+  { file: "lululemon forest green shorts.png", items: ["forest green shorts"] },
+  { file: "merch black bb festival tee.png", items: ["Black BB festival tee"] },
+  { file: "urban outfitters brown tube top.png", items: ["brown tube top"] },
 ];
 
 const dryRun = process.argv.includes("--dry-run");

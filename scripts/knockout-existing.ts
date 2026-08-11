@@ -114,6 +114,11 @@ const ITEM_OPTIONS: Record<string, ItemOptions> = {
   // the backdrop speckled and a wider one eats the sweatshirt.
   "white workout skort": { lift: true },
 
+  // The fill does cut this one, but the model's lit shoulder is blown out to
+  // the backdrop's own value and comes away with it, leaving a notch in the
+  // sleeve. Matting keeps the shoulder.
+  "blue workout long sleeve": { lift: true },
+
   // Shot in a room rather than against a backdrop — a bean bag, a side table, a
   // wall with a floor line in it. The knockout refuses these on its own; the
   // entries are here so the reason is written down rather than rediscovered.

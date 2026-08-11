@@ -114,6 +114,23 @@ const OPTIONS: Record<string, FileOptions> = {
   // down to 9 keeps the silhouette whole but leaves a smear of backdrop in that
   // gap; matting gets both.
   "billy j yellow midi dress slit.png": { lift: true },
+
+  // Worn shots rather than packshots — a mirror, a pavement, a room. Between 15
+  // and 43 percent of each border fits one surface, so the fill has no backdrop
+  // to sample and refuses them. Vision reads the person instead.
+  "black patchwork vintage.png": { lift: true },
+  "brown blazer secondhand.png": { lift: true },
+  "brown side tie tank.png": { lift: true },
+  "free people black cross front sweater.png": { lift: true },
+  "korea brown cargo pants.png": { lift: true },
+  "lululemon forest green shorts.png": { lift: true },
+  "merch black bb festival tee.png": { lift: true },
+  "urban outfitters brown tube top.png": { lift: true },
+
+  // This one is a packshot and the fill does cut it, but it leaves a pale rim
+  // down the model's right arm where the sleeve meets the backdrop, and drops
+  // her braid. Matting gets both.
+  "lululemon brown workout long sleeve.png": { lift: true },
 };
 
 const SUPPORTED = new Set([".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"]);
