@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ItemPhoto } from "@/components/item-photo";
+import { todayISO } from "@/lib/format";
 import {
   getLoggedYears,
   getMonthCoverage,
@@ -41,13 +42,13 @@ export default async function CalendarPage({
   searchParams: Promise<{ month?: string }>;
 }) {
   const { month: raw } = await searchParams;
-  const today = new Date();
-  const todayIso = today.toISOString().slice(0, 10);
+  const todayIso = todayISO();
+  const [todayYear, todayMonth, todayDay] = todayIso.split("-").map(Number);
 
   const [year, month] =
     raw && MONTH_RE.test(raw)
       ? raw.split("-").map(Number)
-      : [today.getUTCFullYear(), today.getUTCMonth() + 1];
+      : [todayYear, todayMonth];
 
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
   const from = iso(year, month, 1);
@@ -65,9 +66,7 @@ export default async function CalendarPage({
   // Only count days that have actually happened — an unlived day isn't a gap.
   const elapsed = Math.min(
     daysInMonth,
-    year === today.getUTCFullYear() && month === today.getUTCMonth() + 1
-      ? today.getUTCDate()
-      : daysInMonth,
+    year === todayYear && month === todayMonth ? todayDay : daysInMonth,
   );
   const logged = thisMonth?.days ?? 0;
   const missed = Math.max(0, elapsed - logged);
@@ -108,7 +107,7 @@ export default async function CalendarPage({
           {years.map((y) => (
             <Link
               key={y}
-              href={`/calendar?month=${y}-${pad(y === today.getUTCFullYear() ? today.getUTCMonth() + 1 : 1)}`}
+              href={`/calendar?month=${y}-${pad(y === todayYear ? todayMonth : 1)}`}
               className={`microcap pb-0.5 text-[10px] tabular-nums ${
                 y === year
                   ? "border-ink border-b font-bold"

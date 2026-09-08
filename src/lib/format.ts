@@ -50,3 +50,25 @@ export function moneyFromNumeric(value: string | null): string | null {
   if (value === null) return null;
   return dollars(Number(value));
 }
+
+/**
+ * The wardrobe is kept on Pacific time, not on whatever clock the server runs
+ * — Vercel's is UTC, which would roll "today" over to tomorrow at 4 or 5pm
+ * here. The IANA zone, not a fixed -08:00, so PST and PDT are both handled.
+ */
+export const TIME_ZONE = "America/Los_Angeles";
+
+const ISO_PARTS = new Intl.DateTimeFormat("en-US", {
+  timeZone: TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/** Today in {@link TIME_ZONE}, as YYYY-MM-DD. */
+export function todayISO(): string {
+  const parts = ISO_PARTS.formatToParts(new Date());
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)!.value;
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}

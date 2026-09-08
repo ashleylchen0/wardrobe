@@ -1,3 +1,4 @@
+import { todayISO } from "@/lib/format";
 import { getOutfitForDate, getPickableItems } from "@/lib/queries";
 import { DateNav } from "./date-nav";
 import { OutfitPicker } from "./outfit-picker";
@@ -5,10 +6,6 @@ import { OutfitPicker } from "./outfit-picker";
 export const metadata = { title: "Log an outfit · Wardrobe" };
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function prettyDate(date: string): string {
   return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", {
