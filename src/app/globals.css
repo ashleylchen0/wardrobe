@@ -24,10 +24,17 @@
      `ink`; the tint behind a selection is `tile`. */
 
   /* Cost-per-wear scale. These three are the only chromatic values in the
-     interface, which is the point: color means a judgement about value. */
-  --color-cpw-good: #4a6b5d;
-  --color-cpw-ok: #8a6a2f;
-  --color-cpw-bad: #9c4f3a;
+     interface, which is the point: color means a judgement about value.
+
+     Stepped up from the original #4a6b5d / #8a6a2f / #9c4f3a, which carried
+     so little chroma (0.04–0.11 in OKLCH, at near-identical lightness) that
+     they read as gray in the 11px figures on the closet grid, and as a wash
+     rather than a green at display size. Same three hues, raised until they
+     survive small tabular text and stay apart for a colorblind reader:
+     all-pairs deutan ΔE 8.1 against the 2.9 the old amber and rust managed. */
+  --color-cpw-good: #10714f;
+  --color-cpw-ok: #b8860b;
+  --color-cpw-bad: #b3261e;
 }
 
 @theme inline {
