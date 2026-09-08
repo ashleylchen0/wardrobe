@@ -35,6 +35,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                 <NavLink href="/log">Today</NavLink>
                 <NavLink href="/calendar">Calendar</NavLink>
                 <NavLink href="/stats">Stats</NavLink>
+                <NavLink href="/ledger">Ledger</NavLink>
                 <SignOutButton />
               </nav>
             </div>

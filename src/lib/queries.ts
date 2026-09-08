@@ -313,3 +313,42 @@ export async function getWearsByYear() {
 export type PickableItem = Awaited<ReturnType<typeof getPickableItems>>[number];
 export type ClosetItem = Awaited<ReturnType<typeof getClosetItems>>[number];
 export type StatsItem = Awaited<ReturnType<typeof getStatsItems>>[number];
+
+/**
+ * Everything the Ledger needs, in one round trip: the whole catalogue with
+ * each item's wear dates alongside it.
+ *
+ * Unlike the stats page this is deliberately *not* scoped to the active
+ * closet. The Ledger's whole point is that you choose the scope — including
+ * archived pieces when you want to ask what you got out of something you no
+ * longer own — so the filtering happens on the client against the full set.
+ *
+ * Dates come back as ISO strings, which sort and compare correctly as text;
+ * the client relies on that rather than parsing 5,000 dates on every keystroke.
+ */
+export async function getLedgerItems() {
+  return db
+    .select({
+      id: items.id,
+      name: items.name,
+      brand: items.brand,
+      category: items.category,
+      costCents: items.costCents,
+      acquiredOn: items.acquiredOn,
+      acquiredPrecision: items.acquiredPrecision,
+      status: items.status,
+      wornOn: sql<string[]>`
+        coalesce(
+          array_agg(${wears.wornOn}::text order by ${wears.wornOn})
+            filter (where ${wears.id} is not null),
+          '{}'
+        )
+      `,
+    })
+    .from(items)
+    .leftJoin(wears, eq(wears.itemId, items.id))
+    .groupBy(items.id)
+    .orderBy(asc(items.name));
+}
+
+export type LedgerItem = Awaited<ReturnType<typeof getLedgerItems>>[number];
